@@ -19,6 +19,7 @@ import {
   useToast,
   Badge,
 } from "@chakra-ui/react";
+import AddProject from "./AddProject";
 
 const Dashboard = () => {
   const [employeeData, setEmployeeData] = useState(null);
@@ -26,6 +27,11 @@ const Dashboard = () => {
   const [weeklyReports, setWeeklyReports] = useState({});
   const [prevWeekReports, setPrevWeekReports] = useState([]);
   const [actualWeekReports, setActualWeekReports] = useState([]);
+  const [week0, setWeek0] = useState({});
+  //   const [week1, setWeek1] = useState({});
+  //   const [week2, setWeek2] = useState({});
+  //   const [week3, setWeek3] = useState({});
+  const [week4, setWeek4] = useState({});
   const [week4Data, setWeek4Data] = useState({});
   const toast = useToast();
 
@@ -42,6 +48,17 @@ const Dashboard = () => {
         const monthlyResponse = await axios.get("/project/getMonthlyReport", {
           withCredentials: true,
         });
+
+        const weekData = await axios.get("project/get4Weeks", {
+          withCredentials: true,
+        });
+
+        setWeek0(weekData.data.weeks[0]);
+        // setWeek1(weekData.data.weeks[1]);
+        // setWeek2(weekData.data.weeks[2]);
+        // setWeek3(weekData.data.weeks[3]);
+        setWeek4(weekData.data.weeks[4]);
+        console.log(week4);
 
         // Group reports by weekId
         const groupedReports = monthlyResponse.data.weeklyReports.reduce(
@@ -76,7 +93,7 @@ const Dashboard = () => {
             endDate: new Date(
               week4StartDate.getTime() + 6 * 24 * 60 * 60 * 1000
             ).toISOString(),
-            availableHours: 40,
+            availableHours: week4.availableHours,
             reports: projectsResponse.data.map((project) => ({
               projectId: project.projectId,
               hours: 0,
@@ -103,7 +120,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [week4]);
 
   const getHoursForProject = (projectId, weekId, isWeek4 = false) => {
     if (isWeek4) {
@@ -225,12 +242,15 @@ const Dashboard = () => {
                   Previous Week
                   <br />
                   Planned
+                  <Badge colorScheme="purple">{week0.availableHours} hrs</Badge>
                 </Th>
                 {sortedWeeks.map(([weekId, week], index) => (
                   <Th key={weekId} width="100px" bg="blue.50">
                     Week {index + 1}
                     <br />
                     {formatDate(week.startDate)}
+                    {" - "}
+                    {formatDate(week.endDate)}
                     <br />
                     <Badge colorScheme="purple">
                       {week.availableHours} hrs
@@ -240,7 +260,9 @@ const Dashboard = () => {
                 <Th width="100px" bg="purple.50">
                   Week 4<br />
                   {week4Data.startDate
-                    ? formatDate(week4Data.startDate)
+                    ? formatDate(week4Data.startDate) +
+                      " - " +
+                      formatDate(week4Data.endDate)
                     : "Future"}
                   <br />
                   <Badge colorScheme="purple">
@@ -364,6 +386,7 @@ const Dashboard = () => {
           </Button>
         </Box>
       </Flex>
+      <AddProject />
     </Container>
   );
 };

@@ -286,3 +286,39 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 });
+
+export const get4Weeks = asyncHandler(async (req: Request, res: Response) => {
+  //@ts-ignore
+  const employeeId = req.employee.employeeId;
+  //@ts-ignore
+  const employee = req.employee;
+
+  const weeks = [];
+
+  // Current week's Monday
+  const currentDate = new Date();
+  const currentDayOfWeek = currentDate.getDay(); // Sunday = 0, Monday = 1, ...
+  const daysSinceMonday = (currentDayOfWeek + 6) % 7; // Adjust for Monday start
+  const mondayThisWeek = new Date(
+    currentDate.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000
+  );
+
+  // Loop to fetch the previous and upcoming 4 weeks
+  for (let i = -1; i < 4; i++) {
+    const startOfWeek = new Date(
+      mondayThisWeek.getTime() + i * 7 * 24 * 60 * 60 * 1000
+    );
+    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+    const weekData = await prisma.week.findFirst({
+      where: {
+        startDate: { lte: endOfWeek.toISOString() },
+        endDate: { gte: startOfWeek.toISOString() },
+      },
+    });
+
+    weeks.push(weekData); // Fallback to calculated dates if not found
+  }
+
+  res.status(200).json({ weeks });
+});
