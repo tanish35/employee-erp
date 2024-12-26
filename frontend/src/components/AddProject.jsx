@@ -26,6 +26,8 @@ const AddProject = () => {
   const [week2Hours, setWeek2Hours] = useState("");
   const [week3Hours, setWeek3Hours] = useState("");
   const [week4Hours, setWeek4Hours] = useState("");
+  const [week0Hours, setWeek0Hours] = useState("");
+  const [week0ActualHours, setWeek0ActualHours] = useState("");
   const [category, setCategory] = useState("Operational"); // Default category
 
   const handleSubmit = async () => {
@@ -35,7 +37,6 @@ const AddProject = () => {
       !week1Hours ||
       !week2Hours ||
       !week3Hours ||
-      !week4Hours ||
       !category
     ) {
       alert("All fields are required!");
@@ -47,6 +48,8 @@ const AddProject = () => {
       const projectData = {
         projectName,
         projectDescription,
+        week0Hours,
+        week0ActualHours,
         week1Hours,
         week2Hours,
         week3Hours,
@@ -55,15 +58,16 @@ const AddProject = () => {
         employeeId,
       };
 
-      const response = await axios.post("/projects/add", projectData, {
-        withCredentials: true,
-      });
-      if (response.status === 200) {
-        alert("Project added successfully!");
-        onClose(); // Close the modal after successful submission
-      } else {
-        alert("Failed to add project");
-      }
+      const response = await axios.post(
+        "/project/addProjectData",
+        projectData,
+        {
+          withCredentials: true,
+        }
+      );
+      onClose();
+      alert("Project added successfully!");
+      window.location.reload();
     } catch (err) {
       console.error("Error adding project:", err);
       alert("Error adding project");
@@ -87,6 +91,16 @@ const AddProject = () => {
         <ModalContent>
           <ModalHeader>Add New Project</ModalHeader>
           <ModalBody>
+            <Select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              mb={3}
+            >
+              <option value="Operational">Operational</option>
+              <option value="Projects">Projects</option>
+              <option value="Strategic">Strategic</option>
+              <option value="Others">Others</option>
+            </Select>
             <Input
               placeholder="Project Name"
               value={projectName}
@@ -94,9 +108,23 @@ const AddProject = () => {
               mb={3}
             />
             <Textarea
-              placeholder="Project Description"
+              placeholder="Activity Description"
               value={projectDescription}
               onChange={(e) => setProjectDescription(e.target.value)}
+              mb={3}
+            />
+            <Input
+              type="number"
+              placeholder="Planned Hours - Week 0"
+              value={week0Hours}
+              onChange={(e) => setWeek0Hours(e.target.value)}
+              mb={3}
+            />
+            <Input
+              type="number"
+              placeholder="Actual Hours - Week 0"
+              value={week0ActualHours}
+              onChange={(e) => setWeek0ActualHours(e.target.value)}
               mb={3}
             />
             <Input
@@ -127,17 +155,6 @@ const AddProject = () => {
               onChange={(e) => setWeek4Hours(e.target.value)}
               mb={3}
             />
-            {/* Category Dropdown */}
-            <Select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              mb={3}
-            >
-              <option value="Operational">Operational</option>
-              <option value="Projects">Projects</option>
-              <option value="Strategic">Strategic</option>
-              <option value="Others">Others</option>
-            </Select>
           </ModalBody>
 
           <ModalFooter>

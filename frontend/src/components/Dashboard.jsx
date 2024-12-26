@@ -58,7 +58,7 @@ const Dashboard = () => {
         // setWeek2(weekData.data.weeks[2]);
         // setWeek3(weekData.data.weeks[3]);
         setWeek4(weekData.data.weeks[4]);
-        console.log(week4);
+        // console.log(week4);
 
         // Group reports by weekId
         const groupedReports = monthlyResponse.data.weeklyReports.reduce(
@@ -77,6 +77,14 @@ const Dashboard = () => {
           {}
         );
 
+        const week4Response = await axios.get("/project/getWeek4Data", {
+          withCredentials: true,
+        });
+        setWeek4Data(week4Response.data);
+        console.log(week4Response.data);
+        // console.log(week4Response.data);
+        // console.log(week4Response);
+
         setWeeklyReports(groupedReports);
         setEmployeeData(monthlyResponse.data.employee);
 
@@ -84,7 +92,7 @@ const Dashboard = () => {
           (a, b) => new Date(b.startDate) - new Date(a.startDate)
         )[0];
 
-        if (lastWeek) {
+        if (lastWeek && !week4Response.data) {
           const week4StartDate = new Date(lastWeek.startDate);
           week4StartDate.setDate(week4StartDate.getDate() + 7);
 
@@ -106,7 +114,7 @@ const Dashboard = () => {
           withCredentials: true,
         });
         setPrevWeekReports(prevWeekResponse.data.weeklyReports || []);
-        setActualWeekReports(prevWeekResponse.data.actualWeeklyReports || []);
+        setActualWeekReports(prevWeekResponse.data.actualWeeklyReport || []);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast({
@@ -120,7 +128,7 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [week4]);
+  }, []);
 
   const getHoursForProject = (projectId, weekId, isWeek4 = false) => {
     if (isWeek4) {
@@ -131,6 +139,12 @@ const Dashboard = () => {
     const report = weeklyReports[weekId].reports.find(
       (r) => r.projectId === projectId
     );
+    return report ? report.hours : 0;
+  };
+
+  const getHoursForActualWeek = (projectId) => {
+    // console.log(actualWeekReports);
+    const report = actualWeekReports.find((r) => r.projectId === projectId);
     return report ? report.hours : 0;
   };
 
@@ -187,10 +201,25 @@ const Dashboard = () => {
     return ((totalHours / weekReports.availableHours) * 100).toFixed(2);
   };
 
+  const calculateCapacityWeek4 = (week4Data) => {
+    if (!week4Data || !week4Data.reports || week4Data.reports.length === 0) {
+      return 0;
+    }
+
+    const totalHours = week4Data.reports.reduce(
+      (sum, r) => sum + (r.hours || 0),
+      0
+    );
+
+    return ((totalHours / week4.availableHours) * 100).toFixed(2);
+  };
+
   if (!projects.length) return <Text>Loading...</Text>;
 
   const handleSubmission = async () => {
     try {
+      console.log(actualWeekReports);
+      console.log(week4Data);
       await axios.post("/project/submitWeeklyReport", {
         actualWeeklyReports: actualWeekReports,
         week4Data,
@@ -227,11 +256,11 @@ const Dashboard = () => {
             </TableCaption>
             <Thead>
               <Tr>
-                <Th width="200px" bg="gray.50">
-                  Project
-                </Th>
                 <Th width="100px" bg="gray.50">
                   Category
+                </Th>
+                <Th width="300px" bg="gray.50">
+                  Project
                 </Th>
                 <Th width="100px" bg="yellow.50">
                   Previous Week
@@ -257,29 +286,11 @@ const Dashboard = () => {
                     </Badge>
                   </Th>
                 ))}
-                <Th width="100px" bg="purple.50">
-                  Week 4<br />
-                  {week4Data.startDate
-                    ? formatDate(week4Data.startDate) +
-                      " - " +
-                      formatDate(week4Data.endDate)
-                    : "Future"}
-                  <br />
-                  <Badge colorScheme="purple">
-                    {week4Data.availableHours} hrs
-                  </Badge>
-                </Th>
               </Tr>
             </Thead>
             <Tbody>
               {projects.map((project) => (
                 <Tr key={project.projectId}>
-                  <Td>
-                    <Text fontWeight="medium">{project.name}</Text>
-                    <Text fontSize="xs" color="gray.600" noOfLines={2}>
-                      {project.description}
-                    </Text>
-                  </Td>
                   <Td>
                     <Badge
                       colorScheme={
@@ -289,41 +300,71 @@ const Dashboard = () => {
                       {project.category}
                     </Badge>
                   </Td>
+                  <Td>
+                    <Text fontWeight="medium">{project.name}</Text>
+                    <Text fontSize="xs" color="gray.600" noOfLines={3}>
+                      {project.description}
+                    </Text>
+                  </Td>
                   <Td bg="yellow.50">
-                    <Input
-                      type="number"
-                      value={getPrevWeekHours(project.projectId, true)}
-                      onChange={(e) =>
-                        handleChange(
-                          project.projectId,
-                          e.target.value,
-                          "actual"
-                        )
-                      }
-                      size="sm"
-                      min="0"
-                      max="40"
-                      bg="white"
-                    />
+                    {actualWeekReports.find(
+                      (r) => r.projectId === project.projectId
+                    )?.Submitted === 1 ? (
+                      <Text>{getHoursForActualWeek(project.projectId)}</Text>
+                    ) : (
+                      <Input
+                        type="number"
+                        value={getHoursForActualWeek(project.projectId)}
+                        onChange={(e) =>
+                          handleChange(
+                            project.projectId,
+                            e.target.value,
+                            "actual"
+                          )
+                        }
+                        size="sm"
+                        min="0"
+                        max="40"
+                        bg="white"
+                      />
+                    )}
                   </Td>
                   <Td bg="green.50">{getPrevWeekHours(project.projectId)}</Td>
-                  {sortedWeeks.map(([weekId]) => (
+                  {sortedWeeks.slice(0, 3).map(([weekId]) => (
                     <Td key={weekId} bg="blue.50">
                       {getHoursForProject(project.projectId, weekId)}
                     </Td>
                   ))}
                   <Td bg="purple.50">
-                    <Input
-                      type="number"
-                      value={getHoursForProject(project.projectId, null, true)}
-                      onChange={(e) =>
-                        handleChange(project.projectId, e.target.value, "week4")
-                      }
-                      size="sm"
-                      min="0"
-                      max="40"
-                      bg="white"
-                    />
+                    {week4Data?.reports?.find(
+                      (r) => r.projectId === project.projectId
+                    )?.Submitted === 1 ? (
+                      <Text>
+                        {week4Data?.reports?.find(
+                          (r) => r.projectId === project.projectId
+                        )?.hours || 0}
+                      </Text>
+                    ) : (
+                      <Input
+                        type="number"
+                        value={
+                          week4Data?.reports?.find(
+                            (r) => r.projectId === project.projectId
+                          )?.hours || 0
+                        }
+                        onChange={(e) =>
+                          handleChange(
+                            project.projectId,
+                            e.target.value,
+                            "week4"
+                          )
+                        }
+                        size="sm"
+                        min="0"
+                        max="40"
+                        bg="white"
+                      />
+                    )}
                   </Td>
                 </Tr>
               ))}
@@ -338,7 +379,7 @@ const Dashboard = () => {
                 <Td bg="green.50">
                   {prevWeekReports.reduce((sum, r) => sum + (r.hours || 0), 0)}
                 </Td>
-                {sortedWeeks.map(([weekId]) => (
+                {sortedWeeks.slice(0, 3).map(([weekId]) => (
                   <Td key={weekId} bg="blue.50">
                     {weeklyReports[weekId].reports.reduce(
                       (sum, r) => sum + (r.hours || 0),
@@ -355,15 +396,28 @@ const Dashboard = () => {
               </Tr>
               <Tr fontWeight="bold">
                 <Td colSpan={2}>Percentage Capacity</Td>
-                <Td bg="yellow.50">-</Td>
-                <Td bg="green.50">-</Td>
-                {sortedWeeks.map(([weekId, week]) => (
+                <Td bg="yellow.50">
+                  {calculateCapacity({
+                    reports: actualWeekReports,
+                    availableHours: week0.availableHours,
+                  })}
+                  %
+                </Td>
+                <Td bg="green.50">
+                  {calculateCapacity({
+                    reports: prevWeekReports,
+                    availableHours: week0.availableHours,
+                  })}
+                  %
+                </Td>
+                {sortedWeeks.slice(0, 3).map(([weekId, week]) => (
                   <Td key={weekId} bg="blue.50">
                     {calculateCapacity(weeklyReports[weekId])}%
                   </Td>
                 ))}
                 <Td bg="purple.50">
-                  {week4Data.availableHours ? calculateCapacity(week4Data) : 0}%
+                  {week4.availableHours ? calculateCapacityWeek4(week4Data) : 0}
+                  %
                 </Td>
               </Tr>
             </Tbody>
@@ -373,13 +427,7 @@ const Dashboard = () => {
           <Button
             colorScheme="teal"
             onClick={() => {
-              toast({
-                title: "Success",
-                description: "Reports submitted successfully!",
-                status: "success",
-                duration: 3000,
-                isClosable: true,
-              });
+              handleSubmission();
             }}
           >
             Submit Weekly Report

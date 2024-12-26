@@ -11,10 +11,10 @@ export const useUser = () => {
         withCredentials: true,
       });
       setUserDetails(res.data);
-      setLoadingUser(false); // Move setLoading inside try block to ensure it's always set
+      setLoadingUser(false);
     } catch (err) {
       console.log(err);
-      setLoadingUser(false); // Set loading to false in case of error
+      setLoadingUser(false);
     }
   }
 
