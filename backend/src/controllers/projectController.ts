@@ -565,3 +565,133 @@ export const getWeek4Data = asyncHandler(
     res.status(200).json({ reports: weeklyReports });
   }
 );
+
+export const addLeaveData = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { week0Hours, week1Hours, week2Hours, week3Hours, week4Hours } =
+      req.body;
+
+    if (
+      !week0Hours ||
+      !week1Hours ||
+      !week2Hours ||
+      !week3Hours ||
+      !week4Hours
+    ) {
+      res.status(400);
+      throw new Error("All fields are required");
+    }
+
+    //@ts-ignore
+    const employeeId = req.employee.employeeId;
+
+    for (let i = -1; i < 4; i++) {
+      const date = new Date();
+      const newDate = new Date(date.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+
+      const week = await prisma.week.findFirst({
+        where: {
+          startDate: { lte: newDate.toISOString() },
+          endDate: { gte: newDate.toISOString() },
+        },
+      });
+
+      if (week) {
+        const weekId = week.weekId;
+
+        // Find existing leave data for the same week and employee
+        const existingLeave = await prisma.leaves.findFirst({
+          where: {
+            weekId,
+            employeeId,
+          },
+        });
+
+        if (existingLeave) {
+          // If it exists, add to the existing hours
+          await prisma.leaves.update({
+            where: { leaveId: existingLeave.leaveId },
+            data: {
+              hours:
+                existingLeave.hours +
+                parseInt(
+                  i === -1
+                    ? week0Hours
+                    : i === 0
+                    ? week1Hours
+                    : i === 1
+                    ? week2Hours
+                    : i === 2
+                    ? week3Hours
+                    : week4Hours,
+                  10
+                ),
+            },
+          });
+        } else {
+          // If it does not exist, create a new leave record
+          await prisma.leaves.create({
+            data: {
+              weekId,
+              employeeId,
+              hours:
+                parseInt(
+                  i === -1
+                    ? week0Hours
+                    : i === 0
+                    ? week1Hours
+                    : i === 1
+                    ? week2Hours
+                    : i === 2
+                    ? week3Hours
+                    : week4Hours,
+                  10
+                ) || 0,
+            },
+          });
+        }
+      }
+    }
+
+    res
+      .status(201)
+      .json({ message: "Leave data added or updated successfully" });
+  }
+);
+
+export const get4WeeksLeaves = asyncHandler(
+  async (req: Request, res: Response) => {
+    //@ts-ignore
+    const employeeId = req.employee.employeeId;
+    //@ts-ignore
+    const employee = req.employee;
+
+    const leaves = [];
+
+    for (let i = -1; i < 4; i++) {
+      const date = new Date();
+      const newDate = new Date(date.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+
+      const week = await prisma.week.findFirst({
+        where: {
+          startDate: { lte: newDate.toISOString() },
+          endDate: { gte: newDate.toISOString() },
+        },
+      });
+
+      if (week) {
+        const weekId = week.weekId;
+
+        const leave = await prisma.leaves.findFirst({
+          where: {
+            weekId,
+            employeeId,
+          },
+        });
+
+        leaves.push(leave);
+      }
+    }
+    res.status(200).json({ leaves });
+  }
+);

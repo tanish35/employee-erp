@@ -1,4 +1,3 @@
-// AddProject.js
 import { useState } from "react";
 import { useUser } from "../hooks/useUser";
 import axios from "axios";
@@ -31,13 +30,16 @@ const AddProject = () => {
   const [category, setCategory] = useState("Operational"); // Default category
 
   const handleSubmit = async () => {
+    if (category !== "Removes" && (!projectName || !projectDescription)) {
+      alert("All fields are required!");
+      return;
+    }
     if (
-      !projectName ||
-      !projectDescription ||
       !week1Hours ||
       !week2Hours ||
       !week3Hours ||
-      !category
+      !week4Hours ||
+      !week0Hours
     ) {
       alert("All fields are required!");
       return;
@@ -46,10 +48,10 @@ const AddProject = () => {
     try {
       const employeeId = userDetails?.id;
       const projectData = {
-        projectName,
-        projectDescription,
+        projectName: category === "Removes" ? "" : projectName,
+        projectDescription: category === "Removes" ? "" : projectDescription,
         week0Hours,
-        week0ActualHours,
+        week0ActualHours: category === "Removes" ? "" : week0ActualHours,
         week1Hours,
         week2Hours,
         week3Hours,
@@ -57,14 +59,23 @@ const AddProject = () => {
         category,
         employeeId,
       };
-
-      const response = await axios.post(
-        "/project/addProjectData",
-        projectData,
-        {
-          withCredentials: true,
-        }
-      );
+      if (category !== "Removes") {
+        const response = await axios.post(
+          "/project/addProjectData",
+          projectData,
+          {
+            withCredentials: true,
+          }
+        );
+      } else {
+        const response = await axios.post(
+          "/project/addLeaveData",
+          projectData,
+          {
+            withCredentials: true,
+          }
+        );
+      }
       onClose();
       alert("Project added successfully!");
       window.location.reload();
@@ -99,32 +110,53 @@ const AddProject = () => {
               <option value="Operational">Operational</option>
               <option value="Projects">Projects</option>
               <option value="Strategic">Strategic</option>
+              <option value="Roadmap">Roadmap</option>
+              <option value="Removes">Leaves</option>
               <option value="Others">Others</option>
             </Select>
-            <Input
-              placeholder="Project Name"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              mb={3}
-            />
-            <Textarea
-              placeholder="Activity Description"
-              value={projectDescription}
-              onChange={(e) => setProjectDescription(e.target.value)}
-              mb={3}
-            />
+
+            {category !== "Removes" && (
+              <>
+                {category === "Roadmap" ? (
+                  <Select
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    mb={3}
+                  >
+                    <option value="A">Project A</option>
+                    <option value="B">Project B</option>
+                    <option value="C">Project C</option>
+                    <option value="D">Project D</option>
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder="Project Name"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    mb={3}
+                  />
+                )}
+                <Textarea
+                  placeholder="Activity Description"
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
+                  mb={3}
+                />
+                <Input
+                  type="number"
+                  placeholder="Actual Hours - Week 0"
+                  value={week0ActualHours}
+                  onChange={(e) => setWeek0ActualHours(e.target.value)}
+                  mb={3}
+                />
+              </>
+            )}
+
             <Input
               type="number"
               placeholder="Planned Hours - Week 0"
               value={week0Hours}
               onChange={(e) => setWeek0Hours(e.target.value)}
-              mb={3}
-            />
-            <Input
-              type="number"
-              placeholder="Actual Hours - Week 0"
-              value={week0ActualHours}
-              onChange={(e) => setWeek0ActualHours(e.target.value)}
               mb={3}
             />
             <Input

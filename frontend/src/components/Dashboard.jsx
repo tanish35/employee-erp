@@ -18,8 +18,11 @@ import {
   Text,
   useToast,
   Badge,
+  Grid,
+  GridItem,
 } from "@chakra-ui/react";
 import AddProject from "./AddProject";
+import WeeklyLeavesSummary from "./WeeklyLeavesSummary";
 
 const Dashboard = () => {
   const [employeeData, setEmployeeData] = useState(null);
@@ -53,21 +56,48 @@ const Dashboard = () => {
           withCredentials: true,
         });
 
-        setWeek0(weekData.data.weeks[0]);
-        // setWeek1(weekData.data.weeks[1]);
-        // setWeek2(weekData.data.weeks[2]);
-        // setWeek3(weekData.data.weeks[3]);
-        setWeek4(weekData.data.weeks[4]);
-        // console.log(week4);
+        // Fetch leaves data
+        const leavesResponse = await axios.get("/project/get4WeeksLeaves", {
+          withCredentials: true,
+        });
+        const hasValidLeaves = leavesResponse?.data?.leaves?.some(
+          (leave) => leave !== null
+        );
+        let leaveHoursByWeek = null;
+        // Create a map of weekId to leave hours
+        if (hasValidLeaves) {
+          leaveHoursByWeek = leavesResponse.data.leaves.reduce((acc, leave) => {
+            acc[leave.weekId] = (acc[leave.weekId] || 0) + leave.hours;
+            return acc;
+          }, {});
+
+          setWeek4({
+            ...weekData.data.weeks[4],
+            availableHours:
+              weekData.data.weeks[4].availableHours -
+              (leaveHoursByWeek[weekData.data.weeks[4].weekId] || 0),
+          });
+        }
+
+        setWeek0({
+          ...weekData.data.weeks[0],
+          availableHours:
+            weekData.data.weeks[0].availableHours -
+            (leaveHoursByWeek?.[weekData.data.weeks[0].weekId] || 0),
+        });
 
         // Group reports by weekId
         const groupedReports = monthlyResponse.data.weeklyReports.reduce(
           (acc, report) => {
             if (!acc[report.weekId]) {
+              let weekLeaveHours = 0;
+              if (leaveHoursByWeek != null) {
+                weekLeaveHours = leaveHoursByWeek[report.weekId] || 0;
+              }
               acc[report.weekId] = {
                 startDate: report.Week.startDate,
                 endDate: report.Week.endDate,
-                availableHours: report.Week.availableHours,
+                availableHours: report.Week.availableHours - weekLeaveHours,
                 reports: [],
               };
             }
@@ -80,10 +110,18 @@ const Dashboard = () => {
         const week4Response = await axios.get("/project/getWeek4Data", {
           withCredentials: true,
         });
-        setWeek4Data(week4Response.data);
-        console.log(week4Response.data);
-        // console.log(week4Response.data);
-        // console.log(week4Response);
+
+        // Adjust week4Data with leave hours
+        if (week4Response.data) {
+          let week4LeaveHours = 0;
+          if (leaveHoursByWeek != null) {
+            week4LeaveHours = leaveHoursByWeek[week4Response.data.weekId] || 0;
+          }
+          setWeek4Data({
+            ...week4Response.data,
+            availableHours: week4Response.data.availableHours - week4LeaveHours,
+          });
+        }
 
         setWeeklyReports(groupedReports);
         setEmployeeData(monthlyResponse.data.employee);
@@ -96,16 +134,21 @@ const Dashboard = () => {
           const week4StartDate = new Date(lastWeek.startDate);
           week4StartDate.setDate(week4StartDate.getDate() + 7);
 
+          // Get the weekId for the new week4
+          const week4WeekId = weekData.data.weeks[4].weekId;
+          const week4LeaveHours = leaveHoursByWeek[week4WeekId] || 0;
+
           setWeek4Data({
             startDate: week4StartDate.toISOString(),
             endDate: new Date(
               week4StartDate.getTime() + 6 * 24 * 60 * 60 * 1000
             ).toISOString(),
-            availableHours: week4.availableHours,
+            availableHours: week4.availableHours - week4LeaveHours,
             reports: projectsResponse.data.map((project) => ({
               projectId: project.projectId,
               hours: 0,
             })),
+            weekId: week4WeekId,
           });
         }
 
@@ -250,220 +293,242 @@ const Dashboard = () => {
   };
 
   return (
-    <Container maxW="16xl" p={4} height="100vh">
-      <Flex direction="column" align="center">
-        <Heading as="h1" size="lg" mb={6}>
-          Welcome, {employeeData?.name}
-        </Heading>
-        <Box w="full" overflowX="auto">
-          <Table variant="simple" colorScheme="teal" size="sm">
-            <TableCaption placement="top">
-              Weekly Hours Distribution
-            </TableCaption>
-            <Thead>
-              <Tr>
-                <Th width="100px" bg="gray.50">
-                  Category
-                </Th>
-                <Th width="300px" bg="gray.50">
-                  Project
-                </Th>
-                <Th width="100px" bg="yellow.50">
-                  Previous Week
-                  <br />
-                  Actual
-                </Th>
-                <Th width="100px" bg="green.50">
-                  Previous Week
-                  <br />
-                  Planned
-                  <Badge colorScheme="purple">{week0.availableHours} hrs</Badge>
-                </Th>
-                {sortedWeeks.map(([weekId, week], index) => (
-                  <Th key={weekId} width="100px" bg="blue.50">
-                    Week {index + 1}
-                    <br />
-                    {formatDate(week.startDate)}
-                    {" - "}
-                    {formatDate(week.endDate)}
-                    <br />
-                    <Badge colorScheme="purple">
-                      {week.availableHours} hrs
-                    </Badge>
-                  </Th>
-                ))}
-              </Tr>
-            </Thead>
-            <Tbody>
-              {projects.map((project) => (
-                <Tr key={project.projectId}>
-                  <Td>
-                    <Badge
-                      colorScheme={
-                        project.category === "Projects" ? "green" : "blue"
-                      }
-                    >
-                      {project.category}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <Text fontWeight="medium">{project.name}</Text>
-                    <Text fontSize="xs" color="gray.600" noOfLines={3}>
-                      {project.description}
-                    </Text>
-                  </Td>
-                  <Td bg="yellow.50">
-                    {actualWeekReports.find(
-                      (r) => r.projectId === project.projectId
-                    )?.Submitted === 1 ? (
-                      <Text>{getHoursForActualWeek(project.projectId)}</Text>
-                    ) : (
-                      <Input
-                        type="number"
-                        value={getHoursForActualWeek(project.projectId)}
-                        onChange={(e) =>
-                          handleChange(
-                            project.projectId,
-                            e.target.value,
-                            "actual"
-                          )
-                        }
-                        size="sm"
-                        min="0"
-                        max="40"
-                        bg="white"
-                      />
-                    )}
-                  </Td>
-                  <Td bg="green.50">{getPrevWeekHours(project.projectId)}</Td>
-                  {sortedWeeks.slice(0, 3).map(([weekId]) => (
-                    <Td key={weekId} bg="blue.50">
-                      {getHoursForProject(project.projectId, weekId)}
-                    </Td>
-                  ))}
-                  <Td bg="purple.50">
-                    {(() => {
-                      const report = week4Data?.reports?.find(
-                        (r) => r.projectId === project.projectId
-                      );
+    <Container maxW="16xl" p={4} height="950px">
+      <Grid templateColumns="1fr 3fr" gap={6} height="50%">
+        {/* Left Sidebar or Summary Section */}
+        <GridItem position="relative">
+          <WeeklyLeavesSummary />
+        </GridItem>
 
-                      return report?.Submitted === 1 ? (
-                        <Text>{report?.hours || 0}</Text>
-                      ) : (
-                        <Input
-                          type="number"
-                          value={
-                            week4Data?.reports?.find(
-                              (r) => r.projectId === project.projectId
-                            )?.hours || 0
+        {/* Main Content Section */}
+        <GridItem>
+          <Flex direction="column" align="center">
+            <Heading as="h1" size="lg" mb={6}>
+              Welcome, {employeeData?.name}
+            </Heading>
+            <Box w="full" overflowX="auto">
+              <Table variant="simple" colorScheme="teal" size="sm">
+                <TableCaption placement="top">
+                  Weekly Hours Distribution
+                </TableCaption>
+                <Thead>
+                  <Tr>
+                    <Th width="100px" bg="gray.50">
+                      Category
+                    </Th>
+                    <Th width="300px" bg="gray.50">
+                      Project
+                    </Th>
+                    <Th width="100px" bg="yellow.50">
+                      Previous Week
+                      <br />
+                      Actual
+                    </Th>
+                    <Th width="100px" bg="green.50">
+                      Previous Week
+                      <br />
+                      Planned
+                      <Badge colorScheme="purple">
+                        {week0.availableHours} hrs
+                      </Badge>
+                    </Th>
+                    {sortedWeeks.map(([weekId, week], index) => (
+                      <Th key={weekId} width="100px" bg="blue.50">
+                        Week {index + 1}
+                        <br />
+                        {formatDate(week.startDate)}
+                        {" - "}
+                        {formatDate(week.endDate)}
+                        <br />
+                        <Badge colorScheme="purple">
+                          {week.availableHours} hrs
+                        </Badge>
+                      </Th>
+                    ))}
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {projects.map((project) => (
+                    <Tr key={project.projectId}>
+                      <Td>
+                        <Badge
+                          colorScheme={
+                            project.category === "Projects" ? "green" : "blue"
                           }
-                          onChange={(e) => {
-                            const numValue = parseFloat(e.target.value) || 0;
+                        >
+                          {project.category}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <Text fontWeight="medium">{project.name}</Text>
+                        <Text fontSize="xs" color="gray.600" noOfLines={3}>
+                          {project.description}
+                        </Text>
+                      </Td>
+                      <Td bg="yellow.50">
+                        {actualWeekReports.find(
+                          (r) => r.projectId === project.projectId
+                        )?.Submitted === 1 ? (
+                          <Text>
+                            {getHoursForActualWeek(project.projectId)}
+                          </Text>
+                        ) : (
+                          <Input
+                            type="number"
+                            value={getHoursForActualWeek(project.projectId)}
+                            onChange={(e) =>
+                              handleChange(
+                                project.projectId,
+                                e.target.value,
+                                "actual"
+                              )
+                            }
+                            size="sm"
+                            min="0"
+                            max="40"
+                            bg="white"
+                          />
+                        )}
+                      </Td>
+                      <Td bg="green.50">
+                        {getPrevWeekHours(project.projectId)}
+                      </Td>
+                      {sortedWeeks.slice(0, 3).map(([weekId]) => (
+                        <Td key={weekId} bg="blue.50">
+                          {getHoursForProject(project.projectId, weekId)}
+                        </Td>
+                      ))}
+                      <Td bg="purple.50">
+                        {(() => {
+                          const report = week4Data?.reports?.find(
+                            (r) => r.projectId === project.projectId
+                          );
 
-                            setWeek4Data((prev) => {
-                              const exists = prev.reports.some(
-                                (report) =>
-                                  report.projectId === project.projectId
-                              );
-                              const updatedReports = exists
-                                ? prev.reports.map((report) =>
-                                    report.projectId === project.projectId
-                                      ? { ...report, hours: numValue }
-                                      : report
-                                  )
-                                : [
-                                    ...prev.reports,
-                                    {
-                                      projectId: project.projectId,
-                                      hours: numValue,
-                                      Submitted: 0,
-                                    },
-                                  ];
+                          return report?.Submitted === 1 ? (
+                            <Text>{report?.hours || 0}</Text>
+                          ) : (
+                            <Input
+                              type="number"
+                              value={
+                                week4Data?.reports?.find(
+                                  (r) => r.projectId === project.projectId
+                                )?.hours || 0
+                              }
+                              onChange={(e) => {
+                                const numValue =
+                                  parseFloat(e.target.value) || 0;
 
-                              return {
-                                ...prev,
-                                reports: updatedReports,
-                              };
-                            });
-                          }}
-                          size="sm"
-                          min="0"
-                          max="40"
-                          bg="white"
-                        />
-                      );
-                    })()}
-                  </Td>
-                </Tr>
-              ))}
-              <Tr fontWeight="bold">
-                <Td colSpan={2}>Total Hours</Td>
-                <Td bg="yellow.50">
-                  {actualWeekReports.reduce(
-                    (sum, r) => sum + (r.hours || 0),
-                    0
-                  )}
-                </Td>
-                <Td bg="green.50">
-                  {prevWeekReports.reduce((sum, r) => sum + (r.hours || 0), 0)}
-                </Td>
-                {sortedWeeks.slice(0, 3).map(([weekId]) => (
-                  <Td key={weekId} bg="blue.50">
-                    {weeklyReports[weekId].reports.reduce(
-                      (sum, r) => sum + (r.hours || 0),
-                      0
-                    )}
-                  </Td>
-                ))}
-                <Td bg="purple.50">
-                  {week4Data.reports?.reduce(
-                    (sum, r) => sum + (r.hours || 0),
-                    0
-                  ) || 0}
-                </Td>
-              </Tr>
-              <Tr fontWeight="bold">
-                <Td colSpan={2}>Percentage Capacity</Td>
-                <Td bg="yellow.50">
-                  {calculateCapacity({
-                    reports: actualWeekReports,
-                    availableHours: week0.availableHours,
-                  })}
-                  %
-                </Td>
-                <Td bg="green.50">
-                  {calculateCapacity({
-                    reports: prevWeekReports,
-                    availableHours: week0.availableHours,
-                  })}
-                  %
-                </Td>
-                {sortedWeeks.slice(0, 3).map(([weekId, week]) => (
-                  <Td key={weekId} bg="blue.50">
-                    {calculateCapacity(weeklyReports[weekId])}%
-                  </Td>
-                ))}
-                <Td bg="purple.50">
-                  {week4.availableHours ? calculateCapacityWeek4(week4Data) : 0}
-                  %
-                </Td>
-              </Tr>
-            </Tbody>
-          </Table>
-        </Box>
-        <Box mt={4}>
-          {!actualWeekReports.some((r) => r.Submitted === 1) && (
-            <Button
-              colorScheme="teal"
-              onClick={() => {
-                handleSubmission();
-              }}
-            >
-              Submit Weekly Report
-            </Button>
-          )}
-        </Box>
-      </Flex>
+                                setWeek4Data((prev) => {
+                                  const exists = prev.reports.some(
+                                    (report) =>
+                                      report.projectId === project.projectId
+                                  );
+                                  const updatedReports = exists
+                                    ? prev.reports.map((report) =>
+                                        report.projectId === project.projectId
+                                          ? { ...report, hours: numValue }
+                                          : report
+                                      )
+                                    : [
+                                        ...prev.reports,
+                                        {
+                                          projectId: project.projectId,
+                                          hours: numValue,
+                                          Submitted: 0,
+                                        },
+                                      ];
+
+                                  return {
+                                    ...prev,
+                                    reports: updatedReports,
+                                  };
+                                });
+                              }}
+                              size="sm"
+                              min="0"
+                              max="40"
+                              bg="white"
+                            />
+                          );
+                        })()}
+                      </Td>
+                    </Tr>
+                  ))}
+                  <Tr fontWeight="bold">
+                    <Td colSpan={2}>Total Hours</Td>
+                    <Td bg="yellow.50">
+                      {actualWeekReports.reduce(
+                        (sum, r) => sum + (r.hours || 0),
+                        0
+                      )}
+                    </Td>
+                    <Td bg="green.50">
+                      {prevWeekReports.reduce(
+                        (sum, r) => sum + (r.hours || 0),
+                        0
+                      )}
+                    </Td>
+                    {sortedWeeks.slice(0, 3).map(([weekId]) => (
+                      <Td key={weekId} bg="blue.50">
+                        {weeklyReports[weekId].reports.reduce(
+                          (sum, r) => sum + (r.hours || 0),
+                          0
+                        )}
+                      </Td>
+                    ))}
+                    <Td bg="purple.50">
+                      {week4Data.reports?.reduce(
+                        (sum, r) => sum + (r.hours || 0),
+                        0
+                      ) || 0}
+                    </Td>
+                  </Tr>
+                  <Tr fontWeight="bold">
+                    <Td colSpan={2}>Percentage Capacity</Td>
+                    <Td bg="yellow.50">
+                      {calculateCapacity({
+                        reports: actualWeekReports,
+                        availableHours: week0.availableHours,
+                      })}
+                      %
+                    </Td>
+                    <Td bg="green.50">
+                      {calculateCapacity({
+                        reports: prevWeekReports,
+                        availableHours: week0.availableHours,
+                      })}
+                      %
+                    </Td>
+                    {sortedWeeks.slice(0, 3).map(([weekId, week]) => (
+                      <Td key={weekId} bg="blue.50">
+                        {calculateCapacity(weeklyReports[weekId])}%
+                      </Td>
+                    ))}
+                    <Td bg="purple.50">
+                      {week4.availableHours
+                        ? calculateCapacityWeek4(week4Data)
+                        : 0}
+                      %
+                    </Td>
+                  </Tr>
+                </Tbody>
+              </Table>
+            </Box>
+            <Box mt={4}>
+              {!actualWeekReports.some((r) => r.Submitted === 1) && (
+                <Button
+                  colorScheme="teal"
+                  onClick={() => {
+                    handleSubmission();
+                  }}
+                >
+                  Submit Weekly Report
+                </Button>
+              )}
+            </Box>
+          </Flex>
+        </GridItem>
+      </Grid>
       {!actualWeekReports.some((r) => r.Submitted === 1) && <AddProject />}
     </Container>
   );

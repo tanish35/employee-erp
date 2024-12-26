@@ -89,3 +89,109 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
   }
   res.status(200).json(employee);
 });
+
+export const addNextWeek = asyncHandler(async (req: Request, res: Response) => {
+  const { availableHours } = req.body;
+  if (!availableHours) {
+    res.status(400);
+    throw new Error("All fields are required");
+  }
+  if (!process.env.SECRET) {
+    res.status(500);
+    throw new Error("Internal Server Error");
+  }
+  const lastWeek = await prisma.week.findMany({
+    orderBy: {
+      startDate: "desc",
+    },
+    take: 1,
+  });
+  const nextWeekStartDate = new Date(lastWeek[0].endDate);
+  const nextWeekEndDate = new Date(
+    lastWeek[0].endDate.getTime() + 7 * 24 * 60 * 60 * 1000
+  );
+  await prisma.week.create({
+    data: {
+      startDate: nextWeekStartDate.toISOString(),
+      endDate: nextWeekEndDate.toISOString(),
+      availableHours: parseInt(availableHours),
+    },
+  });
+  res.status(201).json({ message: "Week added" });
+});
+
+export const history = asyncHandler(async (req: Request, res: Response) => {
+  const { startDate, endDate } = req.body;
+  if (!startDate || !endDate) {
+    res.status(400);
+    throw new Error("All fields are required");
+  }
+  if (!process.env.SECRET) {
+    res.status(500);
+    throw new Error("Internal Server Error");
+  }
+  // @ts-ignore
+  const employeeId = req.employee.employeeId;
+
+  const predictedReports = await prisma.weeklyReport.findMany({
+    select: {
+      Project: {
+        select: {
+          name: true,
+          description: true,
+          category: true,
+        },
+      },
+      hours: true,
+      Week: {
+        select: {
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+    where: {
+      employeeId,
+      Week: {
+        startDate: { gte: new Date(startDate) },
+        endDate: { lte: new Date(endDate) },
+      },
+    },
+    orderBy: {
+      Week: {
+        startDate: "asc",
+      },
+    },
+  });
+
+  const actualReports = await prisma.weeklyActualReport.findMany({
+    select: {
+      Project: {
+        select: {
+          name: true,
+          description: true,
+          category: true,
+        },
+      },
+      hours: true,
+      Week: {
+        select: {
+          startDate: true,
+          endDate: true,
+        },
+      },
+    },
+    where: {
+      employeeId,
+      Week: {
+        startDate: { gte: new Date(startDate) },
+        endDate: { lte: new Date(endDate) },
+      },
+    },
+    orderBy: {
+      Week: {
+        startDate: "asc",
+      },
+    },
+  });
+});
