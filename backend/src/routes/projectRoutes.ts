@@ -10,6 +10,7 @@ import {
   get4Weeks,
   addProjectData,
   getWeek4Data,
+  submitData,
 } from "../controllers/projectController";
 import checkAuth from "../middleware/checkAuth";
 import express from "express";
@@ -27,5 +28,6 @@ router.get("/getSetWeek", checkAuth, getSetWeek);
 router.get("/get4Weeks", checkAuth, get4Weeks);
 router.post("/addProjectData", checkAuth, addProjectData);
 router.get("/getWeek4Data", checkAuth, getWeek4Data);
+router.post("/submitData", checkAuth, submitData);
 
 export default router;

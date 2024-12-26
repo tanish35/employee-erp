@@ -220,10 +220,16 @@ const Dashboard = () => {
     try {
       console.log(actualWeekReports);
       console.log(week4Data);
-      await axios.post("/project/submitWeeklyReport", {
-        actualWeeklyReports: actualWeekReports,
-        week4Data,
-      });
+      await axios.post(
+        "/project/submitData",
+        {
+          actualWeekReports: actualWeekReports,
+          week4Data,
+        },
+        {
+          withCredentials: true,
+        }
+      );
       toast({
         title: "Success",
         description: "Reports submitted successfully!",
@@ -336,35 +342,57 @@ const Dashboard = () => {
                     </Td>
                   ))}
                   <Td bg="purple.50">
-                    {week4Data?.reports?.find(
-                      (r) => r.projectId === project.projectId
-                    )?.Submitted === 1 ? (
-                      <Text>
-                        {week4Data?.reports?.find(
-                          (r) => r.projectId === project.projectId
-                        )?.hours || 0}
-                      </Text>
-                    ) : (
-                      <Input
-                        type="number"
-                        value={
-                          week4Data?.reports?.find(
-                            (r) => r.projectId === project.projectId
-                          )?.hours || 0
-                        }
-                        onChange={(e) =>
-                          handleChange(
-                            project.projectId,
-                            e.target.value,
-                            "week4"
-                          )
-                        }
-                        size="sm"
-                        min="0"
-                        max="40"
-                        bg="white"
-                      />
-                    )}
+                    {(() => {
+                      const report = week4Data?.reports?.find(
+                        (r) => r.projectId === project.projectId
+                      );
+
+                      return report?.Submitted === 1 ? (
+                        <Text>{report?.hours || 0}</Text>
+                      ) : (
+                        <Input
+                          type="number"
+                          value={
+                            week4Data?.reports?.find(
+                              (r) => r.projectId === project.projectId
+                            )?.hours || 0
+                          }
+                          onChange={(e) => {
+                            const numValue = parseFloat(e.target.value) || 0;
+
+                            setWeek4Data((prev) => {
+                              const exists = prev.reports.some(
+                                (report) =>
+                                  report.projectId === project.projectId
+                              );
+                              const updatedReports = exists
+                                ? prev.reports.map((report) =>
+                                    report.projectId === project.projectId
+                                      ? { ...report, hours: numValue }
+                                      : report
+                                  )
+                                : [
+                                    ...prev.reports,
+                                    {
+                                      projectId: project.projectId,
+                                      hours: numValue,
+                                      Submitted: 0,
+                                    },
+                                  ];
+
+                              return {
+                                ...prev,
+                                reports: updatedReports,
+                              };
+                            });
+                          }}
+                          size="sm"
+                          min="0"
+                          max="40"
+                          bg="white"
+                        />
+                      );
+                    })()}
                   </Td>
                 </Tr>
               ))}
@@ -424,17 +452,19 @@ const Dashboard = () => {
           </Table>
         </Box>
         <Box mt={4}>
-          <Button
-            colorScheme="teal"
-            onClick={() => {
-              handleSubmission();
-            }}
-          >
-            Submit Weekly Report
-          </Button>
+          {!actualWeekReports.some((r) => r.Submitted === 1) && (
+            <Button
+              colorScheme="teal"
+              onClick={() => {
+                handleSubmission();
+              }}
+            >
+              Submit Weekly Report
+            </Button>
+          )}
         </Box>
       </Flex>
-      <AddProject />
+      {!actualWeekReports.some((r) => r.Submitted === 1) && <AddProject />}
     </Container>
   );
 };
