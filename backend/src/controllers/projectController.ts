@@ -87,6 +87,7 @@ export const getMonthlyReport = asyncHandler(
           weekId: true,
           projectId: true,
           hours: true,
+          Submitted: true,
           Project: {
             select: {
               name: true,
@@ -256,6 +257,7 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
         weekId: true,
         projectId: true,
         hours: true,
+        Submitted: true,
         Project: {
           select: {
             name: true,
@@ -322,3 +324,186 @@ export const get4Weeks = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json({ weeks });
 });
+
+export const handleWeeklyReportSubmission = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { actualWeeklyReport, week4Data } = req.body;
+    //@ts-ignore
+    const employeeId = req.employee.employeeId;
+  }
+);
+
+export const addProjectData = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      projectName,
+      projectDescription,
+      week0Hours,
+      week0ActualHours,
+      week1Hours,
+      week2Hours,
+      week3Hours,
+      week4Hours,
+      category,
+    } = req.body;
+    //@ts-ignore
+    const employeeId = req.employee.employeeId;
+    if (!projectName || !projectDescription || !category) {
+      res.status(400);
+      throw new Error("All fields are required");
+    }
+    const project = await prisma.project.create({
+      data: {
+        name: projectName,
+        description: projectDescription,
+        category,
+        employeeId,
+      },
+    });
+    const date = new Date();
+    for (let i = -1; i < 4; i++) {
+      const newDate = new Date(date.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+      const week = await prisma.week.findFirst({
+        where: {
+          startDate: { lte: newDate.toISOString() },
+          endDate: { gte: newDate.toISOString() },
+        },
+      });
+      console.log(week);
+      if (week) {
+        await prisma.weeklyReport.create({
+          data: {
+            weekId: week.weekId,
+            projectId: project.projectId,
+            Submitted: (
+              i === -1
+                ? week0Hours
+                : i === 0
+                ? week1Hours
+                : i === 2
+                ? week2Hours
+                : i === 3
+                ? week3Hours
+                : i === 4
+                ? week4Hours
+                : 0
+            )
+              ? 1
+              : 0, // Check if hours is truthy
+            hours:
+              i === -1
+                ? parseInt(week0Hours, 10) || 0
+                : i === 0
+                ? parseInt(week1Hours, 10) || 0
+                : i === 1
+                ? parseInt(week2Hours, 10) || 0
+                : i === 2
+                ? parseInt(week3Hours, 10) || 0
+                : i === 3
+                ? parseInt(week4Hours, 10) || 0
+                : 0, // Convert to integer or default to 0
+            employeeId,
+          },
+        });
+      }
+    }
+    if (week0ActualHours) {
+      const newDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const week = await prisma.week.findFirst({
+        where: {
+          startDate: { lte: newDate.toISOString() },
+          endDate: { gte: newDate.toISOString() },
+        },
+      });
+      if (!week) {
+        res.status(404).json({ message: "Week not found" });
+        return;
+      }
+      await prisma.weeklyActualReport.create({
+        data: {
+          weekId: week.weekId,
+          projectId: project.projectId,
+          Submitted: 1,
+          hours: parseInt(week0ActualHours, 10),
+          employeeId,
+        },
+      });
+    }
+    res.status(201).json({ message: "Project and weekly reports added" });
+  }
+);
+
+export const submitData = asyncHandler(async (req: Request, res: Response) => {
+  const { actualWeekReports, week4Data } = req.body;
+  //@ts-ignore
+  const employeeId = req.employee.employeeId;
+  const date = new Date();
+  const prevDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+  actualWeekReports.forEach(async (report: any) => {
+    const week = await prisma.week.findFirst({
+      where: {
+        startDate: { lte: prevDate.toISOString() },
+        endDate: { gte: prevDate.toISOString() },
+      },
+    });
+    if (!week) {
+      res.status(404).json({ message: "Week not found" });
+      return;
+    }
+    await prisma.weeklyActualReport.create({
+      data: {
+        weekId: week.weekId,
+        projectId: report.projectId,
+        hours: parseInt(report.hours, 10),
+        Submitted: 1,
+        employeeId,
+      },
+    });
+  });
+});
+
+export const getWeek4Data = asyncHandler(
+  async (req: Request, res: Response) => {
+    //@ts-ignore
+    const employeeId = req.employee.employeeId;
+    const date = new Date();
+    const week4Date = new Date(date.getTime() + 3 * 7 * 24 * 60 * 60 * 1000);
+    const week = await prisma.week.findFirst({
+      where: {
+        startDate: { lte: week4Date.toISOString() },
+        endDate: { gte: week4Date.toISOString() },
+      },
+    });
+    if (!week) {
+      res.status(404).json({ message: "Week not found" });
+      return;
+    }
+    const weeklyReports = await prisma.weeklyReport.findMany({
+      select: {
+        weekId: true,
+        projectId: true,
+        hours: true,
+        Submitted: true,
+        Project: {
+          select: {
+            name: true,
+            description: true,
+            category: true,
+          },
+        },
+        Week: {
+          select: {
+            startDate: true,
+            endDate: true,
+            availableHours: true,
+          },
+        },
+      },
+      where: {
+        weekId: week.weekId,
+        employeeId,
+      },
+    });
+    res.status(200).json({ reports: weeklyReports });
+  }
+);

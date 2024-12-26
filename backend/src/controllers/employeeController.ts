@@ -83,7 +83,7 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
   }
   // @ts-ignore
   const employee = req.employee;
-  if (employee) {
+  if (!employee) {
     res.status(401);
     throw new Error("Not authorized");
   }

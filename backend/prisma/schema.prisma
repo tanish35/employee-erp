@@ -56,6 +56,7 @@ model WeeklyReport {
   employeeId   String
   weekId       String
   hours        Int
+  Submitted Int @default(0)
   Project      Project  @relation(fields: [projectId], references: [projectId])
   Employee     Employee @relation(fields: [employeeId], references: [employeeId])
   Week         Week     @relation(fields: [weekId], references: [weekId])
@@ -69,6 +70,7 @@ model WeeklyActualReport{
   employeeId   String
   weekId       String
   hours        Int
+  Submitted    Int    @default(0)
   Project      Project  @relation(fields: [projectId], references: [projectId])
   Employee     Employee @relation(fields: [employeeId], references: [employeeId])
   Week         Week     @relation(fields: [weekId], references: [weekId])

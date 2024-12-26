@@ -12,20 +12,23 @@ async function requireAuth(req, res, next) {
       return;
     }
     const userId = decoded.sub;
+    // console.log(userId);
     if (!userId) {
       res.sendStatus(401);
       return;
     }
     const user = await prisma.employee.findUnique({
       where: {
-        employeeId: decoded.sub,
+        employeeId: userId,
       },
     });
+    // console.log(user);
     if (!user) {
       res.sendStatus(401);
       return;
     }
     req.employee = user;
+    // console.log(req.employee);
     next();
   } catch (err) {
     res.sendStatus(401);
