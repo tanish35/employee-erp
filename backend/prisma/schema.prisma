@@ -26,6 +26,7 @@ model Employee {
   WeeklyActualReport WeeklyActualReport[]
   Leaves       Leaves[]
   EmployeeWeek EmployeeWeek[]
+  ActualLeaves ActualLeaves[]
 }
 
 model Project {
@@ -52,6 +53,7 @@ model Week {
   WeeklyActualReport WeeklyActualReport[]
   Leaves         Leaves[]
   EmployeeWeek   EmployeeWeek[]
+  ActualLeaves   ActualLeaves[]
 }
 
 model WeeklyReport {
@@ -86,6 +88,17 @@ model Leaves{
   leaveId     String   @id @default(cuid())
   employeeId  String
   weekId      String
+  hours       Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  Employee    Employee @relation(fields: [employeeId], references: [employeeId])
+  Week        Week     @relation(fields: [weekId], references: [weekId])
+}
+
+model ActualLeaves{
+  leaveId     String   @id @default(cuid())
+  employeeId  String
+  weekId      String
   hours       Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -97,7 +110,7 @@ model EmployeeWeek{
   employeeWeekId String @id @default(cuid())
   employeeId     String
   weekId         String
-  availableHours Int
+  availableHours Float
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   Employee       Employee @relation(fields: [employeeId], references: [employeeId])
