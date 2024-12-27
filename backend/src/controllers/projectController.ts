@@ -614,18 +614,18 @@ export const addLeaveData = asyncHandler(
             data: {
               hours:
                 existingLeave.hours +
-                parseInt(
-                  i === -1
-                    ? week0Hours
-                    : i === 0
-                    ? week1Hours
-                    : i === 1
-                    ? week2Hours
-                    : i === 2
-                    ? week3Hours
-                    : week4Hours,
-                  10
-                ),
+                7.0 *
+                  parseFloat(
+                    i === -1
+                      ? week0Hours
+                      : i === 0
+                      ? week1Hours
+                      : i === 1
+                      ? week2Hours
+                      : i === 2
+                      ? week3Hours
+                      : week4Hours
+                  ),
             },
           });
         } else {
@@ -635,18 +635,18 @@ export const addLeaveData = asyncHandler(
               weekId,
               employeeId,
               hours:
-                parseInt(
-                  i === -1
-                    ? week0Hours
-                    : i === 0
-                    ? week1Hours
-                    : i === 1
-                    ? week2Hours
-                    : i === 2
-                    ? week3Hours
-                    : week4Hours,
-                  10
-                ) || 0,
+                7.0 *
+                  parseFloat(
+                    i === -1
+                      ? week0Hours
+                      : i === 0
+                      ? week1Hours
+                      : i === 1
+                      ? week2Hours
+                      : i === 2
+                      ? week3Hours
+                      : week4Hours
+                  ) || 0,
             },
           });
         }

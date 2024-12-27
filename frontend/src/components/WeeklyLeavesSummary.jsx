@@ -53,7 +53,7 @@ const WeeklyLeavesSummary = () => {
       .filter((leave) => leave.weekId === week.weekId)
       .reduce((acc, leave) => acc + leave.hours, 0);
 
-    const leaveDays = (totalLeaveHours / 8).toFixed(1);
+    const leaveDays = (totalLeaveHours / 7).toFixed(1);
 
     return {
       weekId: week.weekId,

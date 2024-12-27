@@ -36,7 +36,10 @@ const Dashboard = () => {
   //   const [week3, setWeek3] = useState({});
   const [week4, setWeek4] = useState({});
   const [week4Data, setWeek4Data] = useState({});
+  const [leaveHours, setLeaveHours] = useState(null);
   const toast = useToast();
+
+  let leaveHoursByWeek = null;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,9 +66,9 @@ const Dashboard = () => {
         const hasValidLeaves = leavesResponse?.data?.leaves?.some(
           (leave) => leave !== null
         );
-        let leaveHoursByWeek = null;
         // Create a map of weekId to leave hours
         if (hasValidLeaves) {
+          setLeaveHours(1);
           leaveHoursByWeek = leavesResponse.data.leaves.reduce((acc, leave) => {
             acc[leave.weekId] = (acc[leave.weekId] || 0) + leave.hours;
             return acc;
@@ -296,9 +299,9 @@ const Dashboard = () => {
     <Container maxW="16xl" p={4} height="950px">
       <Grid templateColumns="1fr 3fr" gap={6} height="50%">
         {/* Left Sidebar or Summary Section */}
-        <GridItem position="relative">
-          <WeeklyLeavesSummary />
-        </GridItem>
+        {/* <GridItem position="relative">
+          {leaveHours !== null && <WeeklyLeavesSummary />}
+        </GridItem> */}
 
         {/* Main Content Section */}
         <GridItem>

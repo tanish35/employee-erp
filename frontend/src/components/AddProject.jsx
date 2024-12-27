@@ -34,48 +34,42 @@ const AddProject = () => {
       alert("All fields are required!");
       return;
     }
-    if (
-      !week1Hours ||
-      !week2Hours ||
-      !week3Hours ||
-      !week4Hours ||
-      !week0Hours
-    ) {
-      alert("All fields are required!");
-      return;
-    }
+
+    // Initialize local variables for updated hours
+    let updatedWeek0Hours = week0Hours || "0";
+    let updatedWeek1Hours = week1Hours || "0";
+    let updatedWeek2Hours = week2Hours || "0";
+    let updatedWeek3Hours = week3Hours || "0";
+    let updatedWeek4Hours = week4Hours || "0";
+    let updatedWeek0ActualHours =
+      category === "Removes" ? week0ActualHours || "0" : week0ActualHours;
 
     try {
       const employeeId = userDetails?.id;
       const projectData = {
         projectName: category === "Removes" ? "" : projectName,
         projectDescription: category === "Removes" ? "" : projectDescription,
-        week0Hours,
-        week0ActualHours: category === "Removes" ? "" : week0ActualHours,
-        week1Hours,
-        week2Hours,
-        week3Hours,
-        week4Hours,
+        week0Hours: updatedWeek0Hours,
+        week0ActualHours:
+          category === "Removes" ? updatedWeek0ActualHours : week0ActualHours,
+        week1Hours: updatedWeek1Hours,
+        week2Hours: updatedWeek2Hours,
+        week3Hours: updatedWeek3Hours,
+        week4Hours: updatedWeek4Hours,
         category,
         employeeId,
       };
+
       if (category !== "Removes") {
-        const response = await axios.post(
-          "/project/addProjectData",
-          projectData,
-          {
-            withCredentials: true,
-          }
-        );
+        await axios.post("/project/addProjectData", projectData, {
+          withCredentials: true,
+        });
       } else {
-        const response = await axios.post(
-          "/project/addLeaveData",
-          projectData,
-          {
-            withCredentials: true,
-          }
-        );
+        await axios.post("/project/addLeaveData", projectData, {
+          withCredentials: true,
+        });
       }
+
       onClose();
       alert("Project added successfully!");
       window.location.reload();
@@ -144,7 +138,11 @@ const AddProject = () => {
                 />
                 <Input
                   type="number"
-                  placeholder="Actual Hours - Week 0"
+                  placeholder={
+                    category === "Removes"
+                      ? "Planned Days - Week 0 (Actual)"
+                      : "Actual Hours - Week 0"
+                  }
                   value={week0ActualHours}
                   onChange={(e) => setWeek0ActualHours(e.target.value)}
                   mb={3}
@@ -154,35 +152,55 @@ const AddProject = () => {
 
             <Input
               type="number"
-              placeholder="Planned Hours - Week 0"
+              placeholder={
+                category === "Removes"
+                  ? "Planned Days - Week 0"
+                  : "Planned Hours - Week 0"
+              }
               value={week0Hours}
               onChange={(e) => setWeek0Hours(e.target.value)}
               mb={3}
             />
             <Input
               type="number"
-              placeholder="Planned Hours - Week 1"
+              placeholder={
+                category === "Removes"
+                  ? "Planned Days - Week 1"
+                  : "Planned Hours - Week 1"
+              }
               value={week1Hours}
               onChange={(e) => setWeek1Hours(e.target.value)}
               mb={3}
             />
             <Input
               type="number"
-              placeholder="Planned Hours - Week 2"
+              placeholder={
+                category === "Removes"
+                  ? "Planned Days - Week 2"
+                  : "Planned Hours - Week 2"
+              }
               value={week2Hours}
               onChange={(e) => setWeek2Hours(e.target.value)}
               mb={3}
             />
             <Input
               type="number"
-              placeholder="Planned Hours - Week 3"
+              placeholder={
+                category === "Removes"
+                  ? "Planned Days - Week 3"
+                  : "Planned Hours - Week 3"
+              }
               value={week3Hours}
               onChange={(e) => setWeek3Hours(e.target.value)}
               mb={3}
             />
             <Input
               type="number"
-              placeholder="Planned Hours - Week 4"
+              placeholder={
+                category === "Removes"
+                  ? "Planned Days - Week 4"
+                  : "Planned Hours - Week 4"
+              }
               value={week4Hours}
               onChange={(e) => setWeek4Hours(e.target.value)}
               mb={3}
