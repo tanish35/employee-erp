@@ -20,13 +20,11 @@ export const useUser = () => {
 
   useEffect(() => {
     getDetails();
-  }, []); // Empty dependency array, so it runs only once on component mount
+  }, []); 
 
   useEffect(() => {
     if (userDetails) {
-      // console.log("User details:", userDetails);
     }
-  }, [userDetails]); // Log userDetails whenever it changes
-
+  }, [userDetails]);
   return { loadingUser, userDetails };
 };

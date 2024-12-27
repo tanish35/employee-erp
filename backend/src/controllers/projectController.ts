@@ -58,7 +58,7 @@ export const getMonthlyReport = asyncHandler(
       const currentWeek = await prisma.week.findFirst({
         where: {
           startDate: { lte: currentDate },
-          endDate: { gte: currentDate },
+          endDate: { gt: currentDate },
         },
       });
 
@@ -206,7 +206,7 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
     const prevWeek = await prisma.week.findFirst({
       where: {
         startDate: { lte: isoPrevDate },
-        endDate: { gte: isoPrevDate },
+        endDate: { gt: isoPrevDate },
       },
     });
 
@@ -366,7 +366,7 @@ export const addProjectData = asyncHandler(
       const week = await prisma.week.findFirst({
         where: {
           startDate: { lte: newDate.toISOString() },
-          endDate: { gte: newDate.toISOString() },
+          endDate: { gt: newDate.toISOString() },
         },
       });
       console.log(week);
@@ -397,7 +397,7 @@ export const addProjectData = asyncHandler(
       const week = await prisma.week.findFirst({
         where: {
           startDate: { lte: newDate.toISOString() },
-          endDate: { gte: newDate.toISOString() },
+          endDate: { gt: newDate.toISOString() },
         },
       });
       if (!week) {
@@ -432,7 +432,7 @@ export const submitData = asyncHandler(async (req: Request, res: Response) => {
   const prevWeek = await prisma.week.findFirst({
     where: {
       startDate: { lte: prevDate.toISOString() },
-      endDate: { gte: prevDate.toISOString() },
+      endDate: { gt: prevDate.toISOString() },
     },
   });
   if (!prevWeek) {
@@ -477,7 +477,7 @@ export const submitData = asyncHandler(async (req: Request, res: Response) => {
   const week = await prisma.week.findFirst({
     where: {
       startDate: { lte: week4Date },
-      endDate: { gte: week4Date },
+      endDate: { gt: week4Date },
     },
   });
   if (!week) {
@@ -529,14 +529,15 @@ export const getWeek4Data = asyncHandler(
     const week = await prisma.week.findFirst({
       where: {
         startDate: { lte: week4Date.toISOString() },
-        endDate: { gte: week4Date.toISOString() },
+        endDate: { gt: week4Date.toISOString() },
       },
     });
     if (!week) {
       res.status(404).json({ message: "Week not found" });
       return;
     }
-    const weeklyReports = await prisma.weeklyReport.findMany({
+    let weeklyReports;
+    weeklyReports = await prisma.weeklyReport.findMany({
       select: {
         weekId: true,
         projectId: true,
@@ -562,7 +563,51 @@ export const getWeek4Data = asyncHandler(
         employeeId,
       },
     });
-    res.status(200).json({ reports: weeklyReports });
+    if(weeklyReports.length===0){
+      const projects=await prisma.project.findMany({
+        where:{
+          employeeId
+        }
+      });
+      for(const project of projects){
+        await prisma.weeklyReport.create({
+          data:{
+            weekId:week.weekId,
+            projectId:project.projectId,
+            hours:0,
+            Submitted:0,
+            employeeId
+          }
+        });
+      }
+    }
+    weeklyReports = await prisma.weeklyReport.findMany({
+      select: {
+        weekId: true,
+        projectId: true,
+        hours: true,
+        Submitted: true,
+        Project: {
+          select: {
+            name: true,
+            description: true,
+            category: true,
+          },
+        },
+        Week: {
+          select: {
+            startDate: true,
+            endDate: true,
+            availableHours: true,
+          },
+        },
+      },
+      where: {
+        weekId: week.weekId,
+        employeeId,
+      },
+    });
+    res.status(200).json({ weeklyReports });
   }
 );
 
@@ -592,7 +637,7 @@ export const addLeaveData = asyncHandler(
       const week = await prisma.week.findFirst({
         where: {
           startDate: { lte: newDate.toISOString() },
-          endDate: { gte: newDate.toISOString() },
+          endDate: { gt: newDate.toISOString() },
         },
       });
 
@@ -675,19 +720,30 @@ export const get4WeeksLeaves = asyncHandler(
       const week = await prisma.week.findFirst({
         where: {
           startDate: { lte: newDate.toISOString() },
-          endDate: { gte: newDate.toISOString() },
+          endDate: { gt: newDate.toISOString() },
         },
       });
+
+      let leave;
 
       if (week) {
         const weekId = week.weekId;
 
-        const leave = await prisma.leaves.findFirst({
+        leave = await prisma.leaves.findFirst({
           where: {
             weekId,
             employeeId,
           },
         });
+        if(!leave){
+          leave=await prisma.leaves.create({
+            data: {
+              weekId,
+              employeeId,
+              hours: 0,
+            },
+          });
+        }
 
         leaves.push(leave);
       }

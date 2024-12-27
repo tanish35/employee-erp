@@ -57,6 +57,7 @@ const Dashboard = () => {
           withCredentials: true,
         });
 
+
         // Fetch leaves data
         const leavesResponse = await axios.get("/project/get4WeeksLeaves", {
           withCredentials: true,
@@ -72,6 +73,7 @@ const Dashboard = () => {
             return acc;
           }, {});
 
+          console.log(weekData.data.weeks[4].availableHours,"week4");
           setWeek4({
             ...weekData.data.weeks[4],
             availableHours:
@@ -80,12 +82,15 @@ const Dashboard = () => {
           });
         }
 
+        console.log(weekData.data.weeks[0].availableHours,"week0");
+
         setWeek0({
           ...weekData.data.weeks[0],
           availableHours:
             weekData.data.weeks[0].availableHours -
             (leaveHoursByWeek?.[weekData.data.weeks[0].weekId] || 0),
         });
+
 
         // Group reports by weekId
         const groupedReports = monthlyResponse.data.weeklyReports.reduce(
@@ -347,12 +352,12 @@ const Dashboard = () => {
     <Container maxW="16xl" p={4} height="950px">
       <Grid templateColumns="1fr 3fr" gap={6} height="50%">
         {/* Left Sidebar or Summary Section */}
-        {/* <GridItem position="relative">
+        {/* <GridItem position="relative"> */}
           {leaveHours !== null && <WeeklyLeavesSummary />}
-        </GridItem> */}
+        {/* </GridItem> */}
 
         {/* Main Content Section */}
-        <GridItem>
+        <GridItem position="absolute" left={100}>
           <Flex direction="column" align="center">
             <Heading as="h1" size="lg" mb={6}>
               Welcome, {employeeData?.name}
