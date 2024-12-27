@@ -31,13 +31,11 @@ const Dashboard = () => {
   const [prevWeekReports, setPrevWeekReports] = useState([]);
   const [actualWeekReports, setActualWeekReports] = useState([]);
   const [week0, setWeek0] = useState({});
-  //   const [week1, setWeek1] = useState({});
-  //   const [week2, setWeek2] = useState({});
-  //   const [week3, setWeek3] = useState({});
   const [week4, setWeek4] = useState({});
   const [week4Data, setWeek4Data] = useState({});
   const [leaveHours, setLeaveHours] = useState(null);
   const toast = useToast();
+
 
   let leaveHoursByWeek = null;
 
@@ -200,32 +198,79 @@ const Dashboard = () => {
     return report ? report.hours : 0;
   };
 
-  const handleChange = (projectId, value, type) => {
+  const handleChange = (projectId, value, type, weekId = null) => {
     const numValue = parseFloat(value) || 0;
 
-    if (type === "week4") {
-      setWeek4Data((prev) => ({
-        ...prev,
-        reports: prev.reports.map((report) =>
-          report.projectId === projectId
-            ? { ...report, hours: numValue }
-            : report
-        ),
-      }));
-    } else if (type === "actual") {
-      setActualWeekReports((prev) => {
-        const updatedReports = [...prev];
-        const reportIndex = updatedReports.findIndex(
-          (r) => r.projectId === projectId
-        );
-        if (reportIndex !== -1) {
-          updatedReports[reportIndex].hours = numValue;
-        } else {
-          updatedReports.push({ projectId, hours: numValue });
-        }
-        return updatedReports;
-      });
+    switch (type) {
+      case "week4":
+        setWeek4Data(prev => ({
+          ...prev,
+          reports: prev.reports.map(report =>
+            report.projectId === projectId
+              ? { ...report, hours: numValue }
+              : report
+          ),
+        }));
+        break;
+
+      case "actual":
+        setActualWeekReports(prev => {
+          const updatedReports = [...prev];
+          const reportIndex = updatedReports.findIndex(r => r.projectId === projectId);
+          if (reportIndex !== -1) {
+            updatedReports[reportIndex].hours = numValue;
+          } else {
+            updatedReports.push({ projectId, hours: numValue });
+          }
+          return updatedReports;
+        });
+        break;
+
+      case "weekly":
+        setWeeklyReports(prev => ({
+          ...prev,
+          [weekId]: {
+            ...prev[weekId],
+            reports: prev[weekId].reports.map(report =>
+              report.projectId === projectId
+                ? { ...report, hours: numValue }
+                : report
+            ),
+          },
+        }));
+        break;
+
+      case "prevWeek":
+        setPrevWeekReports(prev => {
+          const updatedReports = [...prev];
+          const reportIndex = updatedReports.findIndex(r => r.projectId === projectId);
+          if (reportIndex !== -1) {
+            updatedReports[reportIndex].hours = numValue;
+          } else {
+            updatedReports.push({ projectId, hours: numValue });
+          }
+          return updatedReports;
+        });
+        break;
     }
+  };
+
+  const renderHoursField = (projectId, value, type, weekId = null, isSubmitted = false) => {
+    if (isSubmitted) {
+      return <Text>{value}</Text>;
+    }
+
+    return (
+      <Input
+        type="number"
+        value={value}
+        onChange={(e) => handleChange(projectId, e.target.value, type, weekId)}
+        size="sm"
+        min="0"
+        max="40"
+        bg="white"
+      />
+    );
   };
 
   const formatDate = (dateStr) => {
@@ -262,6 +307,7 @@ const Dashboard = () => {
 
   if (!projects.length) return <Text>Loading...</Text>;
 
+
   const handleSubmission = async () => {
     try {
       console.log(actualWeekReports);
@@ -294,6 +340,8 @@ const Dashboard = () => {
       });
     }
   };
+
+  
 
   return (
     <Container maxW="16xl" p={4} height="950px">
@@ -354,11 +402,7 @@ const Dashboard = () => {
                   {projects.map((project) => (
                     <Tr key={project.projectId}>
                       <Td>
-                        <Badge
-                          colorScheme={
-                            project.category === "Projects" ? "green" : "blue"
-                          }
-                        >
+                        <Badge colorScheme={project.category === "Projects" ? "green" : "blue"}>
                           {project.category}
                         </Badge>
                       </Td>
@@ -369,91 +413,42 @@ const Dashboard = () => {
                         </Text>
                       </Td>
                       <Td bg="yellow.50">
-                        {actualWeekReports.find(
-                          (r) => r.projectId === project.projectId
-                        )?.Submitted === 1 ? (
-                          <Text>
-                            {getHoursForActualWeek(project.projectId)}
-                          </Text>
-                        ) : (
-                          <Input
-                            type="number"
-                            value={getHoursForActualWeek(project.projectId)}
-                            onChange={(e) =>
-                              handleChange(
-                                project.projectId,
-                                e.target.value,
-                                "actual"
-                              )
-                            }
-                            size="sm"
-                            min="0"
-                            max="40"
-                            bg="white"
-                          />
+                        {renderHoursField(
+                          project.projectId,
+                          getHoursForActualWeek(project.projectId),
+                          "actual",
+                          null,
+                          actualWeekReports.find(r => r.projectId === project.projectId)?.Submitted === 1
                         )}
                       </Td>
                       <Td bg="green.50">
-                        {getPrevWeekHours(project.projectId)}
+                        {renderHoursField(
+                          project.projectId,
+                          getPrevWeekHours(project.projectId),
+                          "prevWeek",
+                          null,
+                          prevWeekReports.find(r => r.projectId === project.projectId)?.Submitted === 1
+                        )}
                       </Td>
-                      {sortedWeeks.slice(0, 3).map(([weekId]) => (
+                      {sortedWeeks.slice(0, 3).map(([weekId, week]) => (
                         <Td key={weekId} bg="blue.50">
-                          {getHoursForProject(project.projectId, weekId)}
+                          {renderHoursField(
+                            project.projectId,
+                            getHoursForProject(project.projectId, weekId),
+                            "weekly",
+                            weekId,
+                            week.reports.find(r => r.projectId === project.projectId)?.Submitted === 1
+                          )}
                         </Td>
                       ))}
                       <Td bg="purple.50">
-                        {(() => {
-                          const report = week4Data?.reports?.find(
-                            (r) => r.projectId === project.projectId
-                          );
-
-                          return report?.Submitted === 1 ? (
-                            <Text>{report?.hours || 0}</Text>
-                          ) : (
-                            <Input
-                              type="number"
-                              value={
-                                week4Data?.reports?.find(
-                                  (r) => r.projectId === project.projectId
-                                )?.hours || 0
-                              }
-                              onChange={(e) => {
-                                const numValue =
-                                  parseFloat(e.target.value) || 0;
-
-                                setWeek4Data((prev) => {
-                                  const exists = prev.reports.some(
-                                    (report) =>
-                                      report.projectId === project.projectId
-                                  );
-                                  const updatedReports = exists
-                                    ? prev.reports.map((report) =>
-                                        report.projectId === project.projectId
-                                          ? { ...report, hours: numValue }
-                                          : report
-                                      )
-                                    : [
-                                        ...prev.reports,
-                                        {
-                                          projectId: project.projectId,
-                                          hours: numValue,
-                                          Submitted: 0,
-                                        },
-                                      ];
-
-                                  return {
-                                    ...prev,
-                                    reports: updatedReports,
-                                  };
-                                });
-                              }}
-                              size="sm"
-                              min="0"
-                              max="40"
-                              bg="white"
-                            />
-                          );
-                        })()}
+                        {renderHoursField(
+                          project.projectId,
+                          week4Data?.reports?.find(r => r.projectId === project.projectId)?.hours || 0,
+                          "week4",
+                          null,
+                          week4Data?.reports?.find(r => r.projectId === project.projectId)?.Submitted === 1
+                        )}
                       </Td>
                     </Tr>
                   ))}
@@ -519,12 +514,7 @@ const Dashboard = () => {
             </Box>
             <Box mt={4}>
               {!actualWeekReports.some((r) => r.Submitted === 1) && (
-                <Button
-                  colorScheme="teal"
-                  onClick={() => {
-                    handleSubmission();
-                  }}
-                >
+                <Button colorScheme="teal" onClick={handleSubmission}>
                   Submit Weekly Report
                 </Button>
               )}
