@@ -20,7 +20,12 @@ import {
   Badge,
   Grid,
   GridItem,
+  Select,
+  Textarea,
+  IconButton,
 } from "@chakra-ui/react";
+// import { AddIcon } from "@chakra-ui/icons";
+import { MdAdd } from "react-icons/md";
 import AddProject from "./AddProject";
 import WeeklyLeavesSummary from "./WeeklyLeavesSummary";
 
@@ -34,8 +39,8 @@ const Dashboard = () => {
   const [week4, setWeek4] = useState({});
   const [week4Data, setWeek4Data] = useState({});
   const [leaveHours, setLeaveHours] = useState(null);
+  const [duplicatedRows, setDuplicatedRows] = useState([]);
   const toast = useToast();
-
 
   let leaveHoursByWeek = null;
 
@@ -57,7 +62,6 @@ const Dashboard = () => {
           withCredentials: true,
         });
 
-
         // Fetch leaves data
         const leavesResponse = await axios.get("/project/get4WeeksLeaves", {
           withCredentials: true,
@@ -73,7 +77,7 @@ const Dashboard = () => {
             return acc;
           }, {});
 
-          console.log(weekData.data.weeks[4].availableHours,"week4");
+          console.log(weekData.data.weeks[4].availableHours, "week4");
           setWeek4({
             ...weekData.data.weeks[4],
             availableHours:
@@ -82,7 +86,7 @@ const Dashboard = () => {
           });
         }
 
-        console.log(weekData.data.weeks[0].availableHours,"week0");
+        console.log(weekData.data.weeks[0].availableHours, "week0");
 
         setWeek0({
           ...weekData.data.weeks[0],
@@ -90,7 +94,6 @@ const Dashboard = () => {
             weekData.data.weeks[0].availableHours -
             (leaveHoursByWeek?.[weekData.data.weeks[0].weekId] || 0),
         });
-
 
         // Group reports by weekId
         const groupedReports = monthlyResponse.data.weeklyReports.reduce(
@@ -179,6 +182,91 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
+  const handleDuplicateRow = (project) => {
+    const newRow = {
+      ...project,
+      projectId: `temp-${Date.now()}`,
+      isNew: true,
+      category: project.category,
+      name: project.name,
+      description: project.description,
+      hours: {},
+    };
+    setDuplicatedRows([...duplicatedRows, newRow]);
+  };
+
+  const handleSaveRow = async (row) => {
+    try {
+      const response = await axios.post(
+        "/project/saveNewProject",
+        {
+          category: row.category,
+          name: row.name,
+          description: row.description,
+          hours: row.hours,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+
+      toast({
+        title: "Success",
+        description: "New project row saved successfully!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      // Remove from duplicated rows and refresh projects
+      setDuplicatedRows((prev) =>
+        prev.filter((p) => p.projectId !== row.projectId)
+      );
+      // Refresh projects list (you'll need to implement this)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save new project row",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleDuplicatedRowChange = (rowId, field, value) => {
+    setDuplicatedRows((prev) =>
+      prev.map((row) =>
+        row.projectId === rowId ? { ...row, [field]: value } : row
+      )
+    );
+  };
+
+  const handleDuplicatedHoursChange = (
+    rowId,
+    weekType,
+    value,
+    weekId = null
+  ) => {
+    setDuplicatedRows((prev) =>
+      prev.map((row) => {
+        if (row.projectId === rowId) {
+          return {
+            ...row,
+            hours: {
+              ...row.hours,
+              [weekType]: {
+                value,
+                weekId,
+              },
+            },
+          };
+        }
+        return row;
+      })
+    );
+  };
+
   const getHoursForProject = (projectId, weekId, isWeek4 = false) => {
     if (isWeek4) {
       const report = week4Data.reports?.find((r) => r.projectId === projectId);
@@ -208,9 +296,10 @@ const Dashboard = () => {
 
     switch (type) {
       case "week4":
-        setWeek4Data(prev => ({
+        // console.log(week4Data);
+        setWeek4Data((prev) => ({
           ...prev,
-          reports: prev.reports.map(report =>
+          reports: prev.reports.map((report) =>
             report.projectId === projectId
               ? { ...report, hours: numValue }
               : report
@@ -219,9 +308,11 @@ const Dashboard = () => {
         break;
 
       case "actual":
-        setActualWeekReports(prev => {
+        setActualWeekReports((prev) => {
           const updatedReports = [...prev];
-          const reportIndex = updatedReports.findIndex(r => r.projectId === projectId);
+          const reportIndex = updatedReports.findIndex(
+            (r) => r.projectId === projectId
+          );
           if (reportIndex !== -1) {
             updatedReports[reportIndex].hours = numValue;
           } else {
@@ -232,11 +323,11 @@ const Dashboard = () => {
         break;
 
       case "weekly":
-        setWeeklyReports(prev => ({
+        setWeeklyReports((prev) => ({
           ...prev,
           [weekId]: {
             ...prev[weekId],
-            reports: prev[weekId].reports.map(report =>
+            reports: prev[weekId].reports.map((report) =>
               report.projectId === projectId
                 ? { ...report, hours: numValue }
                 : report
@@ -246,9 +337,11 @@ const Dashboard = () => {
         break;
 
       case "prevWeek":
-        setPrevWeekReports(prev => {
+        setPrevWeekReports((prev) => {
           const updatedReports = [...prev];
-          const reportIndex = updatedReports.findIndex(r => r.projectId === projectId);
+          const reportIndex = updatedReports.findIndex(
+            (r) => r.projectId === projectId
+          );
           if (reportIndex !== -1) {
             updatedReports[reportIndex].hours = numValue;
           } else {
@@ -260,16 +353,33 @@ const Dashboard = () => {
     }
   };
 
-  const renderHoursField = (projectId, value, type, weekId = null, isSubmitted = false) => {
+  const renderHoursField = (
+    projectId,
+    value,
+    type,
+    weekId = null,
+    isSubmitted = false,
+    isDuplicated = false
+  ) => {
     if (isSubmitted) {
       return <Text>{value}</Text>;
     }
-
     return (
       <Input
         type="number"
         value={value}
-        onChange={(e) => handleChange(projectId, e.target.value, type, weekId)}
+        onChange={(e) => {
+          if (isDuplicated) {
+            handleDuplicatedHoursChange(
+              projectId,
+              type,
+              e.target.value,
+              weekId
+            );
+          } else {
+            handleChange(projectId, e.target.value, type, weekId);
+          }
+        }}
         size="sm"
         min="0"
         max="40"
@@ -312,11 +422,10 @@ const Dashboard = () => {
 
   if (!projects.length) return <Text>Loading...</Text>;
 
-
   const handleSubmission = async () => {
     try {
-      console.log(actualWeekReports);
-      console.log(week4Data);
+      // console.log(actualWeekReports);
+      // console.log(week4Data);
       await axios.post(
         "/project/submitData",
         {
@@ -346,18 +455,16 @@ const Dashboard = () => {
     }
   };
 
-  
-
   return (
     <Container maxW="16xl" p={4} height="950px">
       <Grid templateColumns="1fr 3fr" gap={6} height="50%">
         {/* Left Sidebar or Summary Section */}
         {/* <GridItem position="relative"> */}
-          {leaveHours !== null && <WeeklyLeavesSummary />}
+        {/* {leaveHours !== null && <WeeklyLeavesSummary />} */}
         {/* </GridItem> */}
 
         {/* Main Content Section */}
-        <GridItem position="absolute" left={100}>
+        <GridItem>
           <Flex direction="column" align="center">
             <Heading as="h1" size="lg" mb={6}>
               Welcome, {employeeData?.name}
@@ -407,9 +514,22 @@ const Dashboard = () => {
                   {projects.map((project) => (
                     <Tr key={project.projectId}>
                       <Td>
-                        <Badge colorScheme={project.category === "Projects" ? "green" : "blue"}>
-                          {project.category}
-                        </Badge>
+                        <Flex alignItems="center">
+                          <Badge
+                            colorScheme={
+                              project.category === "Projects" ? "green" : "blue"
+                            }
+                          >
+                            {project.category}
+                          </Badge>
+                          {/* <IconButton
+                            ml={2}
+                            icon={<MdAdd />}
+                            size="sm"
+                            onClick={() => handleDuplicateRow(project)}
+                            aria-label="Duplicate row"
+                          /> */}
+                        </Flex>
                       </Td>
                       <Td>
                         <Text fontWeight="medium">{project.name}</Text>
@@ -423,7 +543,9 @@ const Dashboard = () => {
                           getHoursForActualWeek(project.projectId),
                           "actual",
                           null,
-                          actualWeekReports.find(r => r.projectId === project.projectId)?.Submitted === 1
+                          actualWeekReports.find(
+                            (r) => r.projectId === project.projectId
+                          )?.Submitted === 1
                         )}
                       </Td>
                       <Td bg="green.50">
@@ -432,7 +554,9 @@ const Dashboard = () => {
                           getPrevWeekHours(project.projectId),
                           "prevWeek",
                           null,
-                          prevWeekReports.find(r => r.projectId === project.projectId)?.Submitted === 1
+                          prevWeekReports.find(
+                            (r) => r.projectId === project.projectId
+                          )?.Submitted === 1
                         )}
                       </Td>
                       {sortedWeeks.slice(0, 3).map(([weekId, week]) => (
@@ -442,18 +566,139 @@ const Dashboard = () => {
                             getHoursForProject(project.projectId, weekId),
                             "weekly",
                             weekId,
-                            week.reports.find(r => r.projectId === project.projectId)?.Submitted === 1
+                            week.reports.find(
+                              (r) => r.projectId === project.projectId
+                            )?.Submitted === 1
                           )}
                         </Td>
                       ))}
                       <Td bg="purple.50">
                         {renderHoursField(
                           project.projectId,
-                          week4Data?.reports?.find(r => r.projectId === project.projectId)?.hours || 0,
+                          week4Data?.reports?.find(
+                            (r) => r.projectId === project.projectId
+                          )?.hours || 0,
                           "week4",
                           null,
-                          week4Data?.reports?.find(r => r.projectId === project.projectId)?.Submitted === 1
+                          week4Data?.reports?.find(
+                            (r) => r.projectId === project.projectId
+                          )?.Submitted === 1
                         )}
+                      </Td>
+                    </Tr>
+                  ))}
+                  {duplicatedRows.map((row) => (
+                    <Tr key={row.projectId}>
+                      <Td>
+                        <Select
+                          value={row.category}
+                          onChange={(e) =>
+                            handleDuplicatedRowChange(
+                              row.projectId,
+                              "category",
+                              e.target.value
+                            )
+                          }
+                          size="sm"
+                        >
+                          <option value="Projects">Projects</option>
+                          <option value="Other">Other</option>
+                        </Select>
+                      </Td>
+                      <Td>
+                        <Input
+                          value={row.name}
+                          onChange={(e) =>
+                            handleDuplicatedRowChange(
+                              row.projectId,
+                              "name",
+                              e.target.value
+                            )
+                          }
+                          size="sm"
+                          mb={2}
+                        />
+                        <Textarea
+                          value={row.description}
+                          onChange={(e) =>
+                            handleDuplicatedRowChange(
+                              row.projectId,
+                              "description",
+                              e.target.value
+                            )
+                          }
+                          size="sm"
+                          rows={2}
+                        />
+                      </Td>
+                      <Td bg="yellow.50">
+                        {renderHoursField(
+                          row.projectId,
+                          row.hours?.actual?.value || 0,
+                          "actual",
+                          null,
+                          false,
+                          true
+                        )}
+                      </Td>
+                      <Td bg="yellow.50">
+                        {renderHoursField(
+                          row.projectId,
+                          row.hours?.actual?.value || 0,
+                          "actual",
+                          null,
+                          false,
+                          true
+                        )}
+                      </Td>
+                      <Td bg="yellow.50">
+                        {renderHoursField(
+                          row.projectId,
+                          row.hours?.actual?.value || 0,
+                          "actual",
+                          null,
+                          false,
+                          true
+                        )}
+                      </Td>
+                      <Td bg="yellow.50">
+                        {renderHoursField(
+                          row.projectId,
+                          row.hours?.actual?.value || 0,
+                          "actual",
+                          null,
+                          false,
+                          true
+                        )}
+                      </Td>
+                      <Td bg="yellow.50">
+                        {renderHoursField(
+                          row.projectId,
+                          row.hours?.actual?.value || 0,
+                          "actual",
+                          null,
+                          false,
+                          true
+                        )}
+                      </Td>
+                      <Td bg="yellow.50">
+                        {renderHoursField(
+                          row.projectId,
+                          row.hours?.actual?.value || 0,
+                          "actual",
+                          null,
+                          false,
+                          true
+                        )}
+                      </Td>
+                      <Td>
+                        <Button
+                          size="sm"
+                          colorScheme="green"
+                          onClick={() => handleSaveRow(row)}
+                        >
+                          Save
+                        </Button>
                       </Td>
                     </Tr>
                   ))}
