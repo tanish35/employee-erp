@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, act } from "react";
 import axios from "axios";
 import {
   Box,
@@ -36,10 +36,15 @@ const Dashboard = () => {
   const [prevWeekReports, setPrevWeekReports] = useState([]);
   const [actualWeekReports, setActualWeekReports] = useState([]);
   const [week0, setWeek0] = useState({});
+  const [week1, setWeek1] = useState({});
+  const [week2, setWeek2] = useState({});
+  const [week3, setWeek3] = useState({});
   const [week4, setWeek4] = useState({});
   const [week4Data, setWeek4Data] = useState({});
   const [leaveHours, setLeaveHours] = useState(null);
-  const [duplicatedRows, setDuplicatedRows] = useState([]);
+  const [duplicatedRows, setDuplicatedRows] = useState({});
+  const [fetchDataBool, setFetchDataBool] = useState(false);
+
   const toast = useToast();
 
   let leaveHoursByWeek = null;
@@ -61,6 +66,9 @@ const Dashboard = () => {
         const weekData = await axios.get("project/get4Weeks", {
           withCredentials: true,
         });
+        setWeek1(weekData.data.weeks[1]);
+        setWeek2(weekData.data.weeks[2]);
+        setWeek3(weekData.data.weeks[3]);
 
         // Fetch leaves data
         const leavesResponse = await axios.get("/project/get4WeeksLeaves", {
@@ -165,6 +173,7 @@ const Dashboard = () => {
         const prevWeekResponse = await axios.get("/project/getPrevWeek", {
           withCredentials: true,
         });
+        // console.log(prevWeekResponse.data.weeklyReports);
         setPrevWeekReports(prevWeekResponse.data.weeklyReports || []);
         setActualWeekReports(prevWeekResponse.data.actualWeeklyReport || []);
       } catch (error) {
@@ -180,19 +189,30 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [fetchDataBool]);
 
   const handleDuplicateRow = (project) => {
+    const projectId = `temp-${Date.now()}`;
     const newRow = {
-      ...project,
-      projectId: `temp-${Date.now()}`,
+      projectId,
       isNew: true,
-      category: project.category,
-      name: project.name,
-      description: project.description,
-      hours: {},
+      category: project.category || "",
+      name: project.name || "",
+      description: project.description || "",
+      hours: {
+        actual: { value: 0, weekId: "actualWeekId" },
+        prevWeek: { value: 0, weekId: "prevWeekId" },
+        week1: { value: 0, weekId: "week1Id" },
+        week2: { value: 0, weekId: "week2Id" },
+        week3: { value: 0, weekId: "week3Id" },
+        week4: { value: 0, weekId: "week4Id" },
+      },
     };
-    setDuplicatedRows([...duplicatedRows, newRow]);
+
+    setDuplicatedRows((prev) => ({
+      ...prev,
+      [projectId]: newRow,
+    }));
   };
 
   const handleSaveRow = async (row) => {
@@ -205,9 +225,7 @@ const Dashboard = () => {
           description: row.description,
           hours: row.hours,
         },
-        {
-          withCredentials: true,
-        }
+        { withCredentials: true }
       );
 
       toast({
@@ -218,11 +236,17 @@ const Dashboard = () => {
         isClosable: true,
       });
 
-      // Remove from duplicated rows and refresh projects
-      setDuplicatedRows((prev) =>
-        prev.filter((p) => p.projectId !== row.projectId)
-      );
-      // Refresh projects list (you'll need to implement this)
+      // Remove saved row
+      setDuplicatedRows((prev) => {
+        const newRows = { ...prev };
+        delete newRows[row.projectId];
+        return newRows;
+      });
+      if (fetchDataBool) {
+        setFetchDataBool(false);
+      } else {
+        setFetchDataBool(true);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -235,36 +259,30 @@ const Dashboard = () => {
   };
 
   const handleDuplicatedRowChange = (rowId, field, value) => {
-    setDuplicatedRows((prev) =>
-      prev.map((row) =>
-        row.projectId === rowId ? { ...row, [field]: value } : row
-      )
-    );
+    setDuplicatedRows((prev) => ({
+      ...prev,
+      [rowId]: {
+        ...prev[rowId],
+        [field]: value,
+      },
+    }));
   };
 
-  const handleDuplicatedHoursChange = (
-    rowId,
-    weekType,
-    value,
-    weekId = null
-  ) => {
-    setDuplicatedRows((prev) =>
-      prev.map((row) => {
-        if (row.projectId === rowId) {
-          return {
-            ...row,
-            hours: {
-              ...row.hours,
-              [weekType]: {
-                value,
-                weekId,
-              },
-            },
-          };
-        }
-        return row;
-      })
-    );
+  // Function to handle changes to hours
+  const handleDuplicatedHoursChange = (rowId, weekType, value) => {
+    setDuplicatedRows((prev) => ({
+      ...prev,
+      [rowId]: {
+        ...prev[rowId],
+        hours: {
+          ...prev[rowId].hours,
+          [weekType]: {
+            ...prev[rowId].hours[weekType],
+            value,
+          },
+        },
+      },
+    }));
   };
 
   const getHoursForProject = (projectId, weekId, isWeek4 = false) => {
@@ -352,6 +370,10 @@ const Dashboard = () => {
         break;
     }
   };
+
+  // useEffect(() => {
+  //   console.log(actualWeekReports);
+  // }, [actualWeekReports]);
 
   const renderHoursField = (
     projectId,
@@ -456,19 +478,38 @@ const Dashboard = () => {
   };
 
   return (
-    <Container maxW="16xl" p={4} height="950px">
+    <Container
+      maxW="30xl"
+      p={4}
+      height="100vh" // Adjust this height as needed
+      overflowY="auto" // Enable vertical scrolling
+      border="1px solid" // Optional: Add a border to define the scrollable area
+      borderColor="gray.200" // Optional: Border color for better visibility
+    >
       <Grid templateColumns="1fr 3fr" gap={6} height="50%">
         {/* Left Sidebar or Summary Section */}
         {/* <GridItem position="relative"> */}
-        {/* {leaveHours !== null && <WeeklyLeavesSummary />} */}
         {/* </GridItem> */}
 
         {/* Main Content Section */}
         <GridItem>
           <Flex direction="column" align="center">
-            <Heading as="h1" size="lg" mb={6}>
-              Welcome, {employeeData?.name}
-            </Heading>
+            <Box w="full">
+              <Flex justify="space-between" align="center">
+                <Box>
+                  <Text fontWeight="bold">Name: {employeeData?.name}</Text>
+                  <Text fontWeight="bold">
+                    Department: {employeeData?.department || "Engineering"}
+                  </Text>
+                  <Text fontWeight="bold">
+                    Week Starting:{" "}
+                    {formatDate(prevWeekReports[0]?.Week?.startDate)}
+                  </Text>
+                  {leaveHours !== null && <WeeklyLeavesSummary />}{" "}
+                </Box>
+              </Flex>
+            </Box>
+            <Heading as="h1" size="lg" mb={6}></Heading>
             <Box w="full" overflowX="auto">
               <Table variant="simple" colorScheme="teal" size="sm">
                 <TableCaption placement="top">
@@ -500,8 +541,6 @@ const Dashboard = () => {
                         Week {index + 1}
                         <br />
                         {formatDate(week.startDate)}
-                        {" - "}
-                        {formatDate(week.endDate)}
                         <br />
                         <Badge colorScheme="purple">
                           {week.availableHours} hrs
@@ -522,13 +561,13 @@ const Dashboard = () => {
                           >
                             {project.category}
                           </Badge>
-                          {/* <IconButton
+                          <IconButton
                             ml={2}
                             icon={<MdAdd />}
                             size="sm"
                             onClick={() => handleDuplicateRow(project)}
                             aria-label="Duplicate row"
-                          /> */}
+                          />
                         </Flex>
                       </Td>
                       <Td>
@@ -587,7 +626,7 @@ const Dashboard = () => {
                       </Td>
                     </Tr>
                   ))}
-                  {duplicatedRows.map((row) => (
+                  {Object.values(duplicatedRows).map((row) => (
                     <Tr key={row.projectId}>
                       <Td>
                         <Select
@@ -631,66 +670,30 @@ const Dashboard = () => {
                           rows={2}
                         />
                       </Td>
-                      <Td bg="yellow.50">
-                        {renderHoursField(
-                          row.projectId,
-                          row.hours?.actual?.value || 0,
-                          "actual",
-                          null,
-                          false,
-                          true
-                        )}
-                      </Td>
-                      <Td bg="yellow.50">
-                        {renderHoursField(
-                          row.projectId,
-                          row.hours?.actual?.value || 0,
-                          "actual",
-                          null,
-                          false,
-                          true
-                        )}
-                      </Td>
-                      <Td bg="yellow.50">
-                        {renderHoursField(
-                          row.projectId,
-                          row.hours?.actual?.value || 0,
-                          "actual",
-                          null,
-                          false,
-                          true
-                        )}
-                      </Td>
-                      <Td bg="yellow.50">
-                        {renderHoursField(
-                          row.projectId,
-                          row.hours?.actual?.value || 0,
-                          "actual",
-                          null,
-                          false,
-                          true
-                        )}
-                      </Td>
-                      <Td bg="yellow.50">
-                        {renderHoursField(
-                          row.projectId,
-                          row.hours?.actual?.value || 0,
-                          "actual",
-                          null,
-                          false,
-                          true
-                        )}
-                      </Td>
-                      <Td bg="yellow.50">
-                        {renderHoursField(
-                          row.projectId,
-                          row.hours?.actual?.value || 0,
-                          "actual",
-                          null,
-                          false,
-                          true
-                        )}
-                      </Td>
+                      {[
+                        "actual",
+                        "prevWeek",
+                        "week1",
+                        "week2",
+                        "week3",
+                        "week4",
+                      ].map((weekType) => (
+                        <Td key={weekType} bg="yellow.50">
+                          <Input
+                            bg="white"
+                            value={row.hours[weekType]?.value || 0}
+                            onChange={(e) =>
+                              handleDuplicatedHoursChange(
+                                row.projectId,
+                                weekType,
+                                +e.target.value
+                              )
+                            }
+                            size="sm"
+                            type="number"
+                          />
+                        </Td>
+                      ))}
                       <Td>
                         <Button
                           size="sm"
@@ -702,6 +705,7 @@ const Dashboard = () => {
                       </Td>
                     </Tr>
                   ))}
+
                   <Tr fontWeight="bold">
                     <Td colSpan={2}>Total Hours</Td>
                     <Td bg="yellow.50">

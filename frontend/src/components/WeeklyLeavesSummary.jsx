@@ -56,74 +56,19 @@ const WeeklyLeavesSummary = () => {
   }
 
   return (
-    <Rnd
-      default={{
-        x: 0,
-        y: 550,
-        width: 300,
-        height: "auto",
-      }}
-      bounds="window"
-      enableResizing={{
-        top: true,
-        right: true,
-        bottom: true,
-        left: true,
-        topRight: true,
-        bottomRight: true,
-        bottomLeft: true,
-        topLeft: true,
-      }}
-    >
-      <Box
-        w="full"
-        p="4"
-        borderWidth="1px"
-        borderRadius="md"
-        shadow="md"
-        bg="white"
-        position="relative"
-      >
-        <IconButton
-          position="absolute"
-          top="2"
-          right="2"
-          size="10px"
-          icon={isCollapsed ? <FaChevronDown /> : <FaChevronUp />}
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          aria-label="Toggle Box"
-        />
-        {!isCollapsed && (
-          <>
-            <Box mb="4">
-              <Text fontSize="sm" fontWeight="medium">
-                Recent Leaves
-              </Text>
-            </Box>
-            <Flex direction="column" gap="2">
-              {leavesByWeek.map((week) => (
-                <Box
-                  key={week.weekId}
-                  p="2"
-                  borderRadius="md"
-                  bg={Number(week.leaveDays) > 0 ? "red.100" : "green.100"}
-                >
-                  <Text fontSize="xs" color="gray.600">
-                    Planned
-                  </Text>
-                  <Text fontSize="lg" fontWeight="bold">
-                    {week.leaveDays}
-                    <Text as="span" fontSize="xs" ml="1">
-                      {week.leaveDays > 1 ? "days" : "day"}
-                    </Text>
-                  </Text>
-                </Box>
-              ))}
-            </Flex>
-          </>
-        )}
-      </Box>
-    </Rnd>
+    <div>
+      {leavesByWeek.map((week) => (
+        <Text fontWeight="bold" display="inline" mr="2">
+          Leaves:
+          <Text fontWeight="bold" display="inline" ml="1">
+            {week.leaveDays}
+            <Text as="span" ml="1" display="inline">
+              {week.leaveDays > 1 ? "days" : "day"}
+            </Text>
+          </Text>
+        </Text>
+      ))}
+    </div>
   );
 };
 
