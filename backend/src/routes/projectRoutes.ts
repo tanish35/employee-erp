@@ -13,6 +13,8 @@ import {
   submitData,
   addLeaveData,
   get4WeeksLeaves,
+  unlockAll,
+  saveNewProject,
 } from "../controllers/projectController";
 import checkAuth from "../middleware/checkAuth";
 import express from "express";
@@ -33,5 +35,7 @@ router.get("/getWeek4Data", checkAuth, getWeek4Data);
 router.post("/submitData", checkAuth, submitData);
 router.post("/addLeaveData", checkAuth, addLeaveData);
 router.get("/get4WeeksLeaves", checkAuth, get4WeeksLeaves);
+router.post("/unlockAll", checkAuth, unlockAll);
+router.post("/saveNewProject", checkAuth, saveNewProject);
 
 export default router;

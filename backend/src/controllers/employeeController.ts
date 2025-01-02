@@ -106,7 +106,7 @@ export const addNextWeek = asyncHandler(async (req: Request, res: Response) => {
     },
     take: 1,
   });
-  const nextWeekStartDate = new Date(lastWeek[0].endDate);
+  const nextWeekStartDate = new Date(lastWeek[0].startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
   const nextWeekEndDate = new Date(
     lastWeek[0].endDate.getTime() + 7 * 24 * 60 * 60 * 1000
   );
