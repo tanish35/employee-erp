@@ -15,6 +15,7 @@ import {
   get4WeeksLeaves,
   unlockAll,
   saveNewProject,
+  getActualLeaves,
 } from "../controllers/projectController";
 import checkAuth from "../middleware/checkAuth";
 import express from "express";
@@ -37,5 +38,6 @@ router.post("/addLeaveData", checkAuth, addLeaveData);
 router.get("/get4WeeksLeaves", checkAuth, get4WeeksLeaves);
 router.post("/unlockAll", checkAuth, unlockAll);
 router.post("/saveNewProject", checkAuth, saveNewProject);
+router.get("/getActualLeaves", checkAuth, getActualLeaves);
 
 export default router;
