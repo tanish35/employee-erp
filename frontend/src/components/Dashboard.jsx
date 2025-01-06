@@ -505,18 +505,18 @@ const Dashboard = () => {
 
   const handleSubmission = async () => {
     try {
-      // console.log(actualWeekReports);
-      // console.log(week4Data);
-      await axios.post(
-        "/project/submitData",
-        {
-          actualWeekReports: actualWeekReports,
-          week4Data,
-        },
-        {
-          withCredentials: true,
-        }
-      );
+      console.log(actualWeekReports);
+      console.log(week4Data);
+      // await axios.post(
+      //   "/project/submitData",
+      //   {
+      //     actualWeekReports: actualWeekReports,
+      //     week4Data,
+      //   },
+      //   {
+      //     withCredentials: true,
+      //   }
+      // );
       toast({
         title: "Success",
         description: "Reports submitted successfully!",
