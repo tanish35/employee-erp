@@ -27,7 +27,7 @@ const AddProject = () => {
   const [week4Hours, setWeek4Hours] = useState("");
   const [week0Hours, setWeek0Hours] = useState("");
   const [week0ActualHours, setWeek0ActualHours] = useState("");
-  const [category, setCategory] = useState("Operational"); // Default category
+  const [category, setCategory] = useState("Operational");
 
   const handleSubmit = async () => {
     if (category !== "Removes" && (!projectName || !projectDescription)) {
@@ -41,8 +41,7 @@ const AddProject = () => {
     let updatedWeek2Hours = week2Hours || "0";
     let updatedWeek3Hours = week3Hours || "0";
     let updatedWeek4Hours = week4Hours || "0";
-    let updatedWeek0ActualHours =
-      category === "Removes" ? week0ActualHours || "0" : week0ActualHours;
+    let updatedWeek0ActualHours = week0ActualHours || "0";
 
     try {
       const employeeId = userDetails?.id;
@@ -50,8 +49,7 @@ const AddProject = () => {
         projectName: category === "Removes" ? "" : projectName,
         projectDescription: category === "Removes" ? "" : projectDescription,
         week0Hours: updatedWeek0Hours,
-        week0ActualHours:
-          category === "Removes" ? updatedWeek0ActualHours : week0ActualHours,
+        week0ActualHours: updatedWeek0ActualHours,
         week1Hours: updatedWeek1Hours,
         week2Hours: updatedWeek2Hours,
         week3Hours: updatedWeek3Hours,
@@ -136,20 +134,19 @@ const AddProject = () => {
                   onChange={(e) => setProjectDescription(e.target.value)}
                   mb={3}
                 />
-                <Input
-                  type="number"
-                  placeholder={
-                    category === "Removes"
-                      ? "Planned Days - Week 0 (Actual)"
-                      : "Actual Hours - Week 0"
-                  }
-                  value={week0ActualHours}
-                  onChange={(e) => setWeek0ActualHours(e.target.value)}
-                  mb={3}
-                />
               </>
             )}
-
+            <Input
+              type="number"
+              placeholder={
+                category === "Removes"
+                  ? "Actual Days - Week 0"
+                  : "Actual Hours - Week 0"
+              }
+              value={week0ActualHours}
+              onChange={(e) => setWeek0ActualHours(e.target.value)}
+              mb={3}
+            />
             <Input
               type="number"
               placeholder={

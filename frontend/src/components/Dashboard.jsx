@@ -26,6 +26,9 @@ import {
 } from "@chakra-ui/react";
 // import { AddIcon } from "@chakra-ui/icons";
 import { MdAdd } from "react-icons/md";
+import ClipLoader from "react-spinners/ClipLoader";
+import WeeklyLeaveRow from "./WeeklyLeaveRow";
+import { MdDelete } from "react-icons/md";
 import AddProject from "./AddProject";
 import WeeklyLeavesSummary from "./WeeklyLeavesSummary";
 
@@ -44,12 +47,17 @@ const Dashboard = () => {
   const [leaveHours, setLeaveHours] = useState(null);
   const [duplicatedRows, setDuplicatedRows] = useState({});
   const [fetchDataBool, setFetchDataBool] = useState(false);
+  const [week0ActualHours, setWeek0ActuaHours] = useState(0);
+  const [week0ActualLeaveDays, setWeek0ActualLeaveDays] = useState(0);
+  const [loading, setLoading] = useState(true);
+  // const [week0ActualPercentage, setWeek0ActualPercentage] = useState(0);
 
   const toast = useToast();
 
   let leaveHoursByWeek = null;
 
   useEffect(() => {
+    setLoading(true);
     const fetchData = async () => {
       try {
         // Fetch projects
@@ -69,11 +77,27 @@ const Dashboard = () => {
         setWeek1(weekData.data.weeks[1]);
         setWeek2(weekData.data.weeks[2]);
         setWeek3(weekData.data.weeks[3]);
+        setWeek0ActuaHours(weekData.data.weeks[0].availableHours);
 
         // Fetch leaves data
         const leavesResponse = await axios.get("/project/get4WeeksLeaves", {
           withCredentials: true,
         });
+
+        const actualLeaveResponse = await axios.get(
+          "/project/getActualLeaves",
+          {
+            withCredentials: true,
+          }
+        );
+
+        // console.log(actualLeaveResponse.data.hours);
+        setWeek0ActuaHours(
+          weekData.data.weeks[0].availableHours -
+            actualLeaveResponse.data.actualLeave.hours
+        );
+        setWeek0ActualLeaveDays(actualLeaveResponse.data.actualLeave.hours / 7);
+
         const hasValidLeaves = leavesResponse?.data?.leaves?.some(
           (leave) => leave !== null
         );
@@ -127,6 +151,7 @@ const Dashboard = () => {
         const week4Response = await axios.get("/project/getWeek4Data", {
           withCredentials: true,
         });
+        setLoading(false);
 
         // Adjust week4Data with leave hours
         if (week4Response.data) {
@@ -177,6 +202,7 @@ const Dashboard = () => {
         setPrevWeekReports(prevWeekResponse.data.weeklyReports || []);
         setActualWeekReports(prevWeekResponse.data.actualWeeklyReport || []);
       } catch (error) {
+        setLoading(false);
         console.error("Error fetching data:", error);
         toast({
           title: "Error",
@@ -187,8 +213,8 @@ const Dashboard = () => {
         });
       }
     };
-
     fetchData();
+    // setLoading(false);
   }, [fetchDataBool]);
 
   const handleDuplicateRow = (project) => {
@@ -417,6 +443,39 @@ const Dashboard = () => {
     });
   };
 
+  const handleDeleteRow = async (projectId) => {
+    try {
+      await axios.post(
+        "/project/deleteProject",
+        {
+          projectId,
+        },
+        { withCredentials: true }
+      );
+      toast({
+        title: "Success",
+        description: "Project completed successfully!",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+      if (fetchDataBool) {
+        setFetchDataBool(false);
+      } else {
+        setFetchDataBool(true);
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
   const sortedWeeks = Object.entries(weeklyReports).sort(
     ([, a], [, b]) => new Date(a.startDate) - new Date(b.startDate)
   );
@@ -442,7 +501,7 @@ const Dashboard = () => {
     return ((totalHours / week4.availableHours) * 100).toFixed(2);
   };
 
-  if (!projects.length) return <Text>Loading...</Text>;
+  // if (!projects.length) return <Text>Loading...</Text>;
 
   const handleSubmission = async () => {
     try {
@@ -477,6 +536,14 @@ const Dashboard = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <Flex justify="center" align="center" h="100vh" w="100vw">
+        <ClipLoader size={80} color="gray.900" />
+      </Flex>
+    );
+  }
+
   return (
     <Container
       maxW="30xl"
@@ -505,7 +572,9 @@ const Dashboard = () => {
                     Week Starting:{" "}
                     {formatDate(prevWeekReports[0]?.Week?.startDate)}
                   </Text>
-                  {leaveHours !== null && <WeeklyLeavesSummary />}{" "}
+                  <Text fontWeight="bold">
+                    Leaves: {week0ActualLeaveDays} days
+                  </Text>
                 </Box>
               </Flex>
             </Box>
@@ -527,6 +596,7 @@ const Dashboard = () => {
                       Previous Week
                       <br />
                       Actual
+                      <Badge colorScheme="purple">{week0ActualHours} hrs</Badge>
                     </Th>
                     <Th width="100px" bg="green.50">
                       Previous Week
@@ -553,21 +623,36 @@ const Dashboard = () => {
                   {projects.map((project) => (
                     <Tr key={project.projectId}>
                       <Td>
-                        <Flex alignItems="center">
+                        <Flex
+                          alignItems="center"
+                          justify="space-between"
+                          width="full"
+                        >
                           <Badge
                             colorScheme={
                               project.category === "Projects" ? "green" : "blue"
                             }
+                            minWidth="100px"
+                            textAlign="center"
                           >
                             {project.category}
                           </Badge>
-                          <IconButton
-                            ml={2}
-                            icon={<MdAdd />}
-                            size="sm"
-                            onClick={() => handleDuplicateRow(project)}
-                            aria-label="Duplicate row"
-                          />
+                          <Flex alignItems="center">
+                            <IconButton
+                              icon={<MdAdd />}
+                              size="sm"
+                              onClick={() => handleDuplicateRow(project)}
+                              aria-label="Duplicate row"
+                              ml={2}
+                            />
+                            <IconButton
+                              icon={<MdDelete />}
+                              size="sm"
+                              onClick={() => handleDeleteRow(project.projectId)}
+                              aria-label="Delete row"
+                              ml={2}
+                            />
+                          </Flex>
                         </Flex>
                       </Td>
                       <Td>
@@ -641,22 +726,43 @@ const Dashboard = () => {
                           size="sm"
                         >
                           <option value="Projects">Projects</option>
+                          <option value="Operational">Operational</option>
+                          <option value="Strategic">Strategic</option>
+                          <option value="Roadmap">Roadmap</option>
                           <option value="Other">Other</option>
                         </Select>
                       </Td>
                       <Td>
-                        <Input
-                          value={row.name}
-                          onChange={(e) =>
-                            handleDuplicatedRowChange(
-                              row.projectId,
-                              "name",
-                              e.target.value
-                            )
-                          }
-                          size="sm"
-                          mb={2}
-                        />
+                        {row.category === "Roadmap" ? (
+                          <Select
+                            value={row.name}
+                            onChange={(e) =>
+                              handleDuplicatedRowChange(
+                                row.projectId,
+                                "name",
+                                e.target.value
+                              )
+                            }
+                            size="sm"
+                          >
+                            <option value="Project A">Project A</option>
+                            <option value="Project B">Project B</option>
+                            <option value="Project C">Project C</option>
+                          </Select>
+                        ) : (
+                          <Input
+                            value={row.name}
+                            onChange={(e) =>
+                              handleDuplicatedRowChange(
+                                row.projectId,
+                                "name",
+                                e.target.value
+                              )
+                            }
+                            size="sm"
+                            mb={2}
+                          />
+                        )}
                         <Textarea
                           value={row.description}
                           onChange={(e) =>
@@ -736,11 +842,19 @@ const Dashboard = () => {
                     </Td>
                   </Tr>
                   <Tr fontWeight="bold">
+                    <Td colSpan={2}>Total Leaves(In Days)</Td>
+                    <Td bg="yellow.50">
+                      {parseFloat(week0ActualLeaveDays)}
+                      {week0ActualLeaveDays > 1 ? " days" : " day"}
+                    </Td>
+                    <WeeklyLeaveRow />
+                  </Tr>
+                  <Tr fontWeight="bold">
                     <Td colSpan={2}>Percentage Capacity</Td>
                     <Td bg="yellow.50">
                       {calculateCapacity({
                         reports: actualWeekReports,
-                        availableHours: week0.availableHours,
+                        availableHours: week0ActualHours,
                       })}
                       %
                     </Td>
