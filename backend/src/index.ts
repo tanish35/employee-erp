@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import employeeRoutes from "./routes/employeeRoutes";
 import projectRoutes from "./routes/projectRoutes";
+import historyRoutes from "./routes/historyRoutes";
 
 const app = express();
 app.use(express.json());
@@ -19,6 +20,7 @@ app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use("/employee", employeeRoutes);
 app.use("/project", projectRoutes);
+app.use("/history", historyRoutes);
 
 const port = process.env.PORT;
 

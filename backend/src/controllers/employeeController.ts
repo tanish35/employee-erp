@@ -106,7 +106,9 @@ export const addNextWeek = asyncHandler(async (req: Request, res: Response) => {
     },
     take: 1,
   });
-  const nextWeekStartDate = new Date(lastWeek[0].startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const nextWeekStartDate = new Date(
+    lastWeek[0].startDate.getTime() + 7 * 24 * 60 * 60 * 1000
+  );
   const nextWeekEndDate = new Date(
     lastWeek[0].endDate.getTime() + 7 * 24 * 60 * 60 * 1000
   );
@@ -120,78 +122,83 @@ export const addNextWeek = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json({ message: "Week added" });
 });
 
-export const history = asyncHandler(async (req: Request, res: Response) => {
-  const { startDate, endDate } = req.body;
-  if (!startDate || !endDate) {
-    res.status(400);
-    throw new Error("All fields are required");
-  }
-  if (!process.env.SECRET) {
-    res.status(500);
-    throw new Error("Internal Server Error");
-  }
-  // @ts-ignore
-  const employeeId = req.employee.employeeId;
+// export const history = asyncHandler(async (req: Request, res: Response) => {
+//   const { startDate, endDate } = req.body;
+//   if (!startDate || !endDate) {
+//     res.status(400);
+//     throw new Error("All fields are required");
+//   }
+//   if (!process.env.SECRET) {
+//     res.status(500);
+//     throw new Error("Internal Server Error");
+//   }
+//   // @ts-ignore
+//   const employeeId = req.employee.employeeId;
 
-  const predictedReports = await prisma.weeklyReport.findMany({
-    select: {
-      Project: {
-        select: {
-          name: true,
-          description: true,
-          category: true,
-        },
-      },
-      hours: true,
-      Week: {
-        select: {
-          startDate: true,
-          endDate: true,
-        },
-      },
-    },
-    where: {
-      employeeId,
-      Week: {
-        startDate: { gte: new Date(startDate) },
-        endDate: { lte: new Date(endDate) },
-      },
-    },
-    orderBy: {
-      Week: {
-        startDate: "asc",
-      },
-    },
-  });
+//   const predictedReports = await prisma.weeklyReport.findMany({
+//     select: {
+//       Project: {
+//         select: {
+//           name: true,
+//           description: true,
+//           category: true,
+//         },
+//       },
+//       hours: true,
+//       Week: {
+//         select: {
+//           startDate: true,
+//           endDate: true,
+//         },
+//       },
+//     },
+//     where: {
+//       employeeId,
+//       Week: {
+//         startDate: { gte: new Date(startDate) },
+//         endDate: { lte: new Date(endDate) },
+//       },
+//     },
+//     orderBy: {
+//       Week: {
+//         startDate: "asc",
+//       },
+//     },
+//   });
 
-  const actualReports = await prisma.weeklyActualReport.findMany({
-    select: {
-      Project: {
-        select: {
-          name: true,
-          description: true,
-          category: true,
-        },
-      },
-      hours: true,
-      Week: {
-        select: {
-          startDate: true,
-          endDate: true,
-        },
-      },
-    },
-    where: {
-      employeeId,
-      Week: {
-        startDate: { gte: new Date(startDate) },
-        endDate: { lte: new Date(endDate) },
-      },
-    },
-    orderBy: {
-      Week: {
-        startDate: "asc",
-      },
-    },
-  });
+//   const actualReports = await prisma.weeklyActualReport.findMany({
+//     select: {
+//       Project: {
+//         select: {
+//           name: true,
+//           description: true,
+//           category: true,
+//         },
+//       },
+//       hours: true,
+//       Week: {
+//         select: {
+//           startDate: true,
+//           endDate: true,
+//         },
+//       },
+//     },
+//     where: {
+//       employeeId,
+//       Week: {
+//         startDate: { gte: new Date(startDate) },
+//         endDate: { lte: new Date(endDate) },
+//       },
+//     },
+//     orderBy: {
+//       Week: {
+//         startDate: "asc",
+//       },
+//     },
+//   });
+// });
+
+export const logOut = asyncHandler(async (req: Request, res: Response) => {
+  res.clearCookie("Authorization");
+  res.status(200).json({ message: "Logged out" });
 });

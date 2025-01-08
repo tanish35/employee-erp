@@ -83,7 +83,76 @@ export const getMonthlyReport = asyncHandler(
 
       const weekIds = weeks.map((week) => week.weekId);
 
-      const weeklyReports = await prisma.weeklyReport.findMany({
+      let weeklyReports = await prisma.weeklyReport.findMany({
+        select: {
+          weekId: true,
+          projectId: true,
+          hours: true,
+          Submitted: true,
+          Project: {
+            select: {
+              name: true,
+              description: true,
+              category: true,
+            },
+          },
+          Week: {
+            select: {
+              startDate: true,
+              endDate: true,
+              availableHours: true,
+            },
+          },
+        },
+        where: {
+          weekId: { in: weekIds },
+          employeeId: employeeId,
+          Project: {
+            completed: 0,
+          },
+        },
+        orderBy: {
+          Week: {
+            startDate: "asc",
+          },
+        },
+      });
+
+      // Check for projects that are not completed and do not have a report
+      const projects = await prisma.project.findMany({
+        where: {
+          completed: 0,
+        },
+        select: {
+          projectId: true,
+        },
+      });
+
+      const projectIds = projects.map((project) => project.projectId);
+
+      // For each project, check if a report exists, if not create one
+      for (const projectId of projectIds) {
+        const existingReport = weeklyReports.find(
+          (report) => report.projectId === projectId
+        );
+
+        if (!existingReport) {
+          for (const weekId of weekIds) {
+            await prisma.weeklyReport.create({
+              data: {
+                weekId: weekId,
+                projectId: projectId,
+                employeeId: employeeId,
+                hours: 0,
+                Submitted: 0,
+              },
+            });
+          }
+        }
+      }
+
+      // Fetch updated reports after creation
+      weeklyReports = await prisma.weeklyReport.findMany({
         select: {
           weekId: true,
           projectId: true,
@@ -233,6 +302,7 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
         weekId: true,
         projectId: true,
         hours: true,
+        Submitted: true,
         Project: {
           select: {
             name: true,
@@ -483,106 +553,82 @@ export const addProjectData = asyncHandler(
 );
 
 export const submitData = asyncHandler(async (req: Request, res: Response) => {
-  const { actualWeekReports, week4Data } = req.body;
-  if (!actualWeekReports || !week4Data) {
-    res.status(400).json({ message: "All fields are required" });
-    return;
-  }
+  const { actualWeekReports, prevWeekReports, weeklyReports } = req.body;
+
   //@ts-ignore
   const employeeId = req.employee.employeeId;
-  const date = new Date();
-  const prevDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  // Get the previous week
-  const prevWeek = await prisma.week.findFirst({
-    where: {
-      startDate: { lte: prevDate.toISOString() },
-      endDate: { gt: prevDate.toISOString() },
-    },
-  });
-  if (!prevWeek) {
-    res.status(404).json({ message: "Week not found" });
-    return;
-  }
+  //@ts-ignore
+  const transactionPromises = [];
 
-  for (const report of actualWeekReports) {
-    const existingReport = await prisma.weeklyActualReport.findFirst({
-      where: {
-        weekId: prevWeek.weekId,
-        projectId: report.projectId,
-        employeeId,
-      },
+  // Handle ActualWeekReports for actualWeekReports
+  if (actualWeekReports && actualWeekReports.length > 0) {
+    actualWeekReports.forEach((report: any) => {
+      const { weekId, projectId, hours } = report;
+      transactionPromises.push(
+        prisma.weeklyActualReport.updateMany({
+          where: {
+            employeeId,
+            weekId,
+            projectId,
+          },
+          data: {
+            Submitted: 1,
+            hours: hours, // Update the hours as well
+          },
+        })
+      );
     });
-
-    if (existingReport) {
-      // Update the existing report
-      await prisma.weeklyActualReport.update({
-        where: { weekReportId: existingReport.weekReportId },
-        data: {
-          hours: parseInt(report.hours, 10),
-          Submitted: 1,
-        },
-      });
-    } else {
-      // Create a new report
-      await prisma.weeklyActualReport.create({
-        data: {
-          weekId: prevWeek.weekId,
-          projectId: report.projectId,
-          hours: parseInt(report.hours, 10),
-          Submitted: 1,
-          employeeId,
-        },
-      });
-    }
   }
 
-  // Get the week4 data
-  const week4Date = new Date(date.getTime() + 3 * 7 * 24 * 60 * 60 * 1000);
-  const week = await prisma.week.findFirst({
-    where: {
-      startDate: { lte: week4Date },
-      endDate: { gt: week4Date },
-    },
-  });
-  if (!week) {
-    res.status(404).json({ message: "Week not found" });
-    return;
-  }
-
-  for (const report of week4Data.reports) {
-    const existingReport = await prisma.weeklyReport.findFirst({
-      where: {
-        weekId: week.weekId,
-        projectId: report.projectId,
-        employeeId,
-      },
+  // Handle WeeklyReports for prevWeekReports (same as actual reports)
+  if (prevWeekReports && prevWeekReports.length > 0) {
+    prevWeekReports.forEach((report: any) => {
+      const { weekId, projectId, hours } = report;
+      transactionPromises.push(
+        prisma.weeklyReport.updateMany({
+          where: {
+            weekId,
+            projectId,
+          },
+          data: {
+            Submitted: 1,
+            hours: hours, // Update the hours as well
+          },
+        })
+      );
     });
-
-    if (existingReport) {
-      // Update the existing report
-      await prisma.weeklyReport.update({
-        where: { weekReportId: existingReport.weekReportId },
-        data: {
-          hours: parseInt(report.hours, 10),
-          Submitted: 1,
-        },
-      });
-    } else {
-      // Create a new report
-      await prisma.weeklyReport.create({
-        data: {
-          weekId: week.weekId,
-          projectId: report.projectId,
-          hours: parseInt(report.hours, 10),
-          Submitted: 1,
-          employeeId,
-        },
-      });
-    }
   }
 
-  res.status(201).json({ message: "Data submitted" });
+  // Handle WeeklyReports for nested reports in weeklyReports
+  if (weeklyReports && Object.keys(weeklyReports).length > 0) {
+    Object.keys(weeklyReports).forEach((weekKey) => {
+      const weekData = weeklyReports[weekKey];
+      const { reports } = weekData;
+
+      // Add reports to transaction
+      reports.forEach((report: any) => {
+        const { weekId, projectId, hours } = report;
+        transactionPromises.push(
+          prisma.weeklyReport.updateMany({
+            where: {
+              weekId,
+              projectId,
+            },
+            data: {
+              Submitted: 1,
+              hours: hours, // Update the hours as well
+            },
+          })
+        );
+      });
+    });
+  }
+
+  //@ts-ignore
+  await prisma.$transaction(transactionPromises);
+
+  res.status(200).json({ message: "Submission updated successfully!" });
 });
 
 export const getWeek4Data = asyncHandler(
@@ -876,6 +922,11 @@ export const unlockAll = asyncHandler(async (req: Request, res: Response) => {
       Submitted: 0,
     },
   });
+  const response2 = await prisma.weeklyActualReport.updateMany({
+    data: {
+      Submitted: 0,
+    },
+  });
   res.status(200).json("All reports unlocked");
 });
 
@@ -1060,5 +1111,103 @@ export const getActualLeaves = asyncHandler(
     }
 
     res.status(200).json({ actualLeave });
+  }
+);
+
+export const updateLeave = asyncHandler(async (req: Request, res: Response) => {
+  const { weekId, action } = req.body;
+  //@ts-ignore
+  const employeeId = req.employee.employeeId;
+  const leave = await prisma.leaves.findFirst({
+    where: {
+      weekId,
+      employeeId,
+    },
+  });
+  if (!leave) {
+    if (action == "remove") {
+      res.status(404).json({ message: "Leave not found" });
+      return;
+    }
+    await prisma.leaves.create({
+      data: {
+        weekId,
+        employeeId,
+        hours: 7,
+      },
+    });
+    res.status(201).json({ message: "Leave added" });
+    return;
+  }
+  if (action == "add") {
+    await prisma.leaves.update({
+      where: {
+        leaveId: leave.leaveId,
+      },
+      data: {
+        hours: leave.hours + 7,
+      },
+    });
+  }
+  if (action == "remove") {
+    await prisma.leaves.update({
+      where: {
+        leaveId: leave.leaveId,
+      },
+      data: {
+        hours: leave.hours - 7,
+      },
+    });
+  }
+  res.status(200).json({ message: "Leave updated" });
+});
+
+export const updateActualLeave = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { weekId, action } = req.body;
+    //@ts-ignore
+    const employeeId = req.employee.employeeId;
+    const leave = await prisma.actualLeaves.findFirst({
+      where: {
+        weekId,
+        employeeId,
+      },
+    });
+    if (!leave) {
+      if (action == "remove") {
+        res.status(404).json({ message: "Leave not found" });
+        return;
+      }
+      await prisma.actualLeaves.create({
+        data: {
+          weekId,
+          employeeId,
+          hours: 7,
+        },
+      });
+      res.status(201).json({ message: "Leave added" });
+      return;
+    }
+    if (action == "add") {
+      await prisma.actualLeaves.update({
+        where: {
+          leaveId: leave.leaveId,
+        },
+        data: {
+          hours: leave.hours + 7,
+        },
+      });
+    }
+    if (action == "remove") {
+      await prisma.actualLeaves.update({
+        where: {
+          leaveId: leave.leaveId,
+        },
+        data: {
+          hours: leave.hours - 7,
+        },
+      });
+    }
+    res.status(200).json({ message: "Leave updated" });
   }
 );

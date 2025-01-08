@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Box, Text, Flex, Spinner, IconButton, Td } from "@chakra-ui/react";
@@ -48,12 +46,13 @@ const WeeklyLeaveRow = () => {
 
   const handleLeaveChange = async (weekId, action) => {
     try {
-      // await axios.post(
-      //   "/project/updateLeave",
-      //   { weekId, action },
-      //   { withCredentials: true }
-      // );
+      await axios.post(
+        "/project/updateLeave",
+        { weekId, action },
+        { withCredentials: true }
+      );
       console.log(weekId, action);
+      window.location.reload();
 
       // setLeavesByWeek((prevLeaves) =>
       //   prevLeaves.map((week) => {
@@ -81,28 +80,42 @@ const WeeklyLeaveRow = () => {
   }
 
   const renderWeekTd = (week, bgColor) => (
-    <Td key={week.weekId} bg={bgColor}>
+    <Td
+      key={week.weekId}
+      bg={bgColor}
+      minWidth={28}
+      p={2}
+      borderRadius="md"
+      transition="all 0.2s"
+      _hover={{ boxShadow: "md", transform: "translateY(-2px)" }}
+    >
       <Flex alignItems="center" justifyContent="space-between">
-        <Text>
-          {week.leaveDays.toFixed(1)} {week.leaveDays > 1 ? "days" : "day"}
+        <IconButton
+          aria-label="Remove leave"
+          icon={<MinusIcon boxSize={3} />}
+          size="sm"
+          variant="ghost"
+          colorScheme="red"
+          opacity={0.6}
+          _hover={{ opacity: 1, bg: "red.100" }}
+          onClick={() => handleLeaveChange(week.weekId, "remove")}
+        />
+        <Text fontWeight="medium" fontSize="sm">
+          {week.leaveDays.toFixed(1)}
+          <Text as="span" fontSize="xs" ml={1} color="gray.500">
+            {week.leaveDays > 1 ? "days" : "day"}
+          </Text>
         </Text>
-        <Box>
-          {/* <IconButton
-            aria-label="Add leave"
-            icon={<AddIcon boxSize={3} />}
-            size="xs"
-            variant="ghost"
-            mr={1}
-            onClick={() => handleLeaveChange(week.weekId, "add")}
-          />
-          <IconButton
-            aria-label="Remove leave"
-            icon={<MinusIcon boxSize={3} />}
-            size="xs"
-            variant="ghost"
-            onClick={() => handleLeaveChange(week.weekId, "remove")}
-          /> */}
-        </Box>
+        <IconButton
+          aria-label="Add leave"
+          icon={<AddIcon boxSize={3} />}
+          size="sm"
+          variant="ghost"
+          colorScheme="green"
+          opacity={0.6}
+          _hover={{ opacity: 1, bg: "green.100" }}
+          onClick={() => handleLeaveChange(week.weekId, "add")}
+        />
       </Flex>
     </Td>
   );

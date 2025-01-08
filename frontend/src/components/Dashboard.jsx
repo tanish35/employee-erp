@@ -23,12 +23,21 @@ import {
   Select,
   Textarea,
   IconButton,
+  Image,
 } from "@chakra-ui/react";
 // import { AddIcon } from "@chakra-ui/icons";
 import { MdAdd } from "react-icons/md";
 import ClipLoader from "react-spinners/ClipLoader";
 import WeeklyLeaveRow from "./WeeklyLeaveRow";
 import { MdDelete } from "react-icons/md";
+import { AddIcon, MinusIcon } from "@chakra-ui/icons";
+import { Card, CardBody, VStack, HStack, Icon } from "@chakra-ui/react";
+import {
+  FaUser,
+  FaBuilding,
+  FaCalendarAlt,
+  FaUmbrellaBeach,
+} from "react-icons/fa";
 import AddProject from "./AddProject";
 import WeeklyLeavesSummary from "./WeeklyLeavesSummary";
 
@@ -243,6 +252,7 @@ const Dashboard = () => {
 
   const handleSaveRow = async (row) => {
     try {
+      setLoading(true);
       const response = await axios.post(
         "/project/saveNewProject",
         {
@@ -273,6 +283,7 @@ const Dashboard = () => {
       } else {
         setFetchDataBool(true);
       }
+      setLoading(false);
     } catch (error) {
       toast({
         title: "Error",
@@ -506,17 +517,19 @@ const Dashboard = () => {
   const handleSubmission = async () => {
     try {
       console.log(actualWeekReports);
-      console.log(week4Data);
-      // await axios.post(
-      //   "/project/submitData",
-      //   {
-      //     actualWeekReports: actualWeekReports,
-      //     week4Data,
-      //   },
-      //   {
-      //     withCredentials: true,
-      //   }
-      // );
+      console.log(prevWeekReports);
+      console.log(weeklyReports);
+      await axios.post(
+        "/project/submitData",
+        {
+          actualWeekReports: actualWeekReports,
+          prevWeekReports,
+          weeklyReports,
+        },
+        {
+          withCredentials: true,
+        }
+      );
       toast({
         title: "Success",
         description: "Reports submitted successfully!",
@@ -536,6 +549,33 @@ const Dashboard = () => {
     }
   };
 
+  const handleLeaveChange = async (weekId, action) => {
+    try {
+      await axios.post(
+        "/project/updateActualLeave",
+        { weekId, action },
+        { withCredentials: true }
+      );
+      console.log(weekId, action);
+      window.location.reload();
+
+      // setLeavesByWeek((prevLeaves) =>
+      //   prevLeaves.map((week) => {
+      //     if (week.weekId === weekId) {
+      //       const newLeaveDays =
+      //         action === "add"
+      //           ? week.leaveDays + 0.1
+      //           : Math.max(0, week.leaveDays - 0.1);
+      //       return { ...week, leaveDays: parseFloat(newLeaveDays.toFixed(1)) };
+      //     }
+      //     return week;
+      //   })
+      // );
+    } catch (error) {
+      console.error(`Failed to ${action} leave:`, error);
+    }
+  };
+
   if (loading) {
     return (
       <Flex justify="center" align="center" h="100vh" w="100vw">
@@ -546,38 +586,66 @@ const Dashboard = () => {
 
   return (
     <Container
-      maxW="30xl"
+      maxW="100vw"
       p={4}
-      height="100vh" // Adjust this height as needed
-      overflowY="auto" // Enable vertical scrolling
-      border="1px solid" // Optional: Add a border to define the scrollable area
-      borderColor="gray.200" // Optional: Border color for better visibility
+      height="100vh"
+      overflowY="auto"
+      overflowX="auto"
+      border="1px solid"
+      borderColor="gray.200"
     >
+      {/* <Flex justifyContent="flex-end" alignItems="center" mb={4}>
+        <Button colorScheme="red" onClick={() => console.log("Logout clicked")}>
+          Logout
+        </Button>
+      </Flex> */}
       <Grid templateColumns="1fr 3fr" gap={6} height="50%">
-        {/* Left Sidebar or Summary Section */}
-        {/* <GridItem position="relative"> */}
-        {/* </GridItem> */}
-
-        {/* Main Content Section */}
         <GridItem>
+          <Image
+            src="polycab1.png"
+            alt="Polycab Logo"
+            width="300px"
+            height="200px"
+            mt={-50}
+            ml={-10}
+          />
           <Flex direction="column" align="center">
-            <Box w="full">
-              <Flex justify="space-between" align="center">
-                <Box>
-                  <Text fontWeight="bold">Name: {employeeData?.name}</Text>
-                  <Text fontWeight="bold">
-                    Department: {employeeData?.department || "Engineering"}
-                  </Text>
-                  <Text fontWeight="bold">
-                    Week Starting:{" "}
-                    {formatDate(prevWeekReports[0]?.Week?.startDate)}
-                  </Text>
-                  <Text fontWeight="bold">
-                    Leaves: {week0ActualLeaveDays} days
-                  </Text>
-                </Box>
-              </Flex>
-            </Box>
+            <Card w="80vw" boxShadow="md" borderRadius="lg" mt={-30}>
+              <CardBody>
+                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                  <GridItem>
+                    <VStack align="start" spacing={3}>
+                      <HStack>
+                        <Icon as={FaUser} color="blue.500" />
+                        <Text fontWeight="bold">Name:</Text>
+                        <Text>{employeeData?.name}</Text>
+                      </HStack>
+                      <HStack>
+                        <Icon as={FaBuilding} color="green.500" />
+                        <Text fontWeight="bold">Department:</Text>
+                        <Text>{employeeData?.department || "Engineering"}</Text>
+                      </HStack>
+                    </VStack>
+                  </GridItem>
+                  <GridItem>
+                    <VStack align="start" spacing={3}>
+                      <HStack>
+                        <Icon as={FaCalendarAlt} color="purple.500" />
+                        <Text fontWeight="bold">Week Starting:</Text>
+                        <Text>
+                          {formatDate(prevWeekReports[0]?.Week?.startDate)}
+                        </Text>
+                      </HStack>
+                      <HStack>
+                        <Icon as={FaUmbrellaBeach} color="orange.500" />
+                        <Text fontWeight="bold">Leaves:</Text>
+                        <Text>{week0ActualLeaveDays} days</Text>
+                      </HStack>
+                    </VStack>
+                  </GridItem>
+                </Grid>
+              </CardBody>
+            </Card>
             <Heading as="h1" size="lg" mb={6}></Heading>
             <Box w="full" overflowX="auto">
               <Table variant="simple" colorScheme="teal" size="sm">
@@ -843,10 +911,52 @@ const Dashboard = () => {
                   </Tr>
                   <Tr fontWeight="bold">
                     <Td colSpan={2}>Total Leaves(In Days)</Td>
-                    <Td bg="yellow.50">
-                      {parseFloat(week0ActualLeaveDays)}
-                      {week0ActualLeaveDays > 1 ? " days" : " day"}
+                    <Td
+                      bg="yellow.50"
+                      transition="all 0.2s"
+                      minWidth={28}
+                      _hover={{
+                        boxShadow: "md",
+                        transform: "translateY(-2px)",
+                      }}
+                      px={2}
+                    >
+                      <Flex
+                        alignItems="center"
+                        justifyContent="space-between"
+                        ml={-2}
+                      >
+                        <IconButton
+                          aria-label="Remove leave"
+                          icon={<MinusIcon boxSize={3} />}
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="red"
+                          opacity={0.6}
+                          _hover={{ opacity: 1, bg: "red.100" }}
+                          onClick={() =>
+                            handleLeaveChange(week0.weekId, "remove")
+                          }
+                        />
+                        <Text fontWeight="medium" fontSize="sm">
+                          {week0ActualLeaveDays.toFixed(1)}
+                          <Text as="span" fontSize="xs" ml={1} color="gray.500">
+                            {week0ActualLeaveDays > 1 ? "days" : "day"}
+                          </Text>
+                        </Text>
+                        <IconButton
+                          aria-label="Add leave"
+                          icon={<AddIcon boxSize={3} />}
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="green"
+                          opacity={0.6}
+                          _hover={{ opacity: 1, bg: "green.100" }}
+                          onClick={() => handleLeaveChange(week0.weekId, "add")}
+                        />
+                      </Flex>
                     </Td>
+
                     <WeeklyLeaveRow />
                   </Tr>
                   <Tr fontWeight="bold">

@@ -4,6 +4,7 @@ import prisma from "../lib/prisma";
 async function requireAuth(req, res, next) {
   try {
     const token = req.cookies.Authorization;
+    // console.log(token);
     // @ts-ignore
     const decoded = jwt.verify(token, process.env.SECRET);
     // @ts-ignore
