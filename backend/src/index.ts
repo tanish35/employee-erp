@@ -6,6 +6,7 @@ import cors from "cors";
 import employeeRoutes from "./routes/employeeRoutes";
 import projectRoutes from "./routes/projectRoutes";
 import historyRoutes from "./routes/historyRoutes";
+import leaderboardRoutes from "./routes/leaderboardRoutes";
 
 const app = express();
 app.use(express.json());
@@ -21,6 +22,7 @@ app.use(cookieParser());
 app.use("/employee", employeeRoutes);
 app.use("/project", projectRoutes);
 app.use("/history", historyRoutes);
+app.use("/leaderboard", leaderboardRoutes);
 
 const port = process.env.PORT;
 

@@ -74,7 +74,8 @@ export const getMonthlyReport = asyncHandler(
         orderBy: {
           startDate: "asc",
         },
-        take: 4,
+        skip: 1, // Skip the first week
+        take: 4, // Take the next 4 weeks
       });
 
       if (weeks.length === 0) {
@@ -263,7 +264,7 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
   const currentDate = new Date();
 
   // Get the previous week's date
-  const prevDate = new Date(currentDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const prevDate = new Date(currentDate.getTime());
 
   // Convert to ISO string to ensure correct format
   const isoPrevDate = prevDate.toISOString();
@@ -441,7 +442,7 @@ export const get4Weeks = asyncHandler(async (req: Request, res: Response) => {
   );
 
   // Loop to fetch the previous and upcoming 4 weeks
-  for (let i = -1; i < 4; i++) {
+  for (let i = 0; i <= 4; i++) {
     const startOfWeek = new Date(
       mondayThisWeek.getTime() + i * 7 * 24 * 60 * 60 * 1000
     );
@@ -459,14 +460,6 @@ export const get4Weeks = asyncHandler(async (req: Request, res: Response) => {
 
   res.status(200).json({ weeks });
 });
-
-export const handleWeeklyReportSubmission = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { actualWeeklyReport, week4Data } = req.body;
-    //@ts-ignore
-    const employeeId = req.employee.employeeId;
-  }
-);
 
 export const addProjectData = asyncHandler(
   async (req: Request, res: Response) => {
@@ -496,7 +489,7 @@ export const addProjectData = asyncHandler(
       },
     });
     const date = new Date();
-    for (let i = -1; i < 4; i++) {
+    for (let i = 0; i <= 4; i++) {
       const newDate = new Date(date.getTime() + i * 7 * 24 * 60 * 60 * 1000);
       const week = await prisma.week.findFirst({
         where: {
@@ -504,7 +497,7 @@ export const addProjectData = asyncHandler(
           endDate: { gt: newDate.toISOString() },
         },
       });
-      console.log(week);
+      // console.log(week);
       if (week) {
         await prisma.weeklyReport.create({
           data: {
@@ -528,7 +521,7 @@ export const addProjectData = asyncHandler(
       }
     }
     if (week0ActualHours) {
-      const newDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const newDate = new Date(date.getTime());
       const week = await prisma.week.findFirst({
         where: {
           startDate: { lte: newDate.toISOString() },
@@ -636,7 +629,7 @@ export const getWeek4Data = asyncHandler(
     //@ts-ignore
     const employeeId = req.employee.employeeId;
     const date = new Date();
-    const week4Date = new Date(date.getTime() + 3 * 7 * 24 * 60 * 60 * 1000);
+    const week4Date = new Date(date.getTime() + 4 * 7 * 24 * 60 * 60 * 1000);
     const week = await prisma.week.findFirst({
       where: {
         startDate: { lte: week4Date.toISOString() },
@@ -755,7 +748,7 @@ export const addLeaveData = asyncHandler(
     //@ts-ignore
     const employeeId = req.employee.employeeId;
 
-    for (let i = -1; i < 4; i++) {
+    for (let i = 0; i <= 4; i++) {
       const date = new Date();
       const newDate = new Date(date.getTime() + i * 7 * 24 * 60 * 60 * 1000);
 
@@ -823,7 +816,7 @@ export const addLeaveData = asyncHandler(
       }
     }
     const date = new Date();
-    const newDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const newDate = new Date(date.getTime());
     const week0 = await prisma.week.findFirst({
       where: {
         startDate: { lte: newDate.toISOString() },
@@ -877,7 +870,7 @@ export const get4WeeksLeaves = asyncHandler(
 
     const leaves = [];
 
-    for (let i = -1; i < 4; i++) {
+    for (let i = 0; i <= 4; i++) {
       const date = new Date();
       const newDate = new Date(date.getTime() + i * 7 * 24 * 60 * 60 * 1000);
 
@@ -1072,7 +1065,7 @@ export const deleteProject = asyncHandler(
 export const getActualLeaves = asyncHandler(
   async (req: Request, res: Response) => {
     const date = new Date();
-    const newDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const newDate = new Date(date.getTime());
     //@ts-ignore
     const employeeId = req.employee.employeeId;
     const week0 = await prisma.week.findFirst({

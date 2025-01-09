@@ -8,6 +8,7 @@ import {
 import LoginPage from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import History from "./components/History";
+import Leaderboard from "./components/Leaderboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MainLayout from "./components/MainLayout";
 import { useUser } from "./hooks/useUser";
@@ -44,6 +45,10 @@ const App = () => {
         {
           path: "history",
           element: <History />,
+        },
+        {
+          path: "leaderboard",
+          element: <Leaderboard />,
         },
       ],
     },

@@ -13,14 +13,14 @@ export const useUser = () => {
       setUserDetails(res.data);
       setLoadingUser(false);
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       setLoadingUser(false);
     }
   }
 
   useEffect(() => {
     getDetails();
-  }, []); 
+  }, []);
 
   useEffect(() => {
     if (userDetails) {

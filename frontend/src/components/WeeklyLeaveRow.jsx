@@ -51,7 +51,7 @@ const WeeklyLeaveRow = () => {
         { weekId, action },
         { withCredentials: true }
       );
-      console.log(weekId, action);
+      // console.log(weekId, action);
       window.location.reload();
 
       // setLeavesByWeek((prevLeaves) =>

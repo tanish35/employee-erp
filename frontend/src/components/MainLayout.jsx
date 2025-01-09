@@ -82,6 +82,15 @@ const MainLayout = () => {
             {/* Replace with an icon if desired */}
           </Button>
           <Button
+            colorScheme="blue"
+            variant="ghost"
+            onClick={() => navigate("/leaderboard")}
+            justifyContent={isCollapsed ? "center" : "flex-start"}
+          >
+            {!isCollapsed && <Text>🏆 Leaderboard</Text>}
+            {isCollapsed && <Text>🏆</Text>}{" "}
+          </Button>
+          <Button
             colorScheme="red"
             variant="ghost"
             onClick={handleLogout}

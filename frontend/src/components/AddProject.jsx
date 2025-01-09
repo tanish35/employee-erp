@@ -82,11 +82,10 @@ const AddProject = () => {
       <Button
         onClick={onOpen}
         colorScheme="blue"
-        position="fixed"
-        bottom="20px"
-        right="20px"
+        position="relative"
+        left={450}
       >
-        Add Project
+        Add Task
       </Button>
 
       <Modal isOpen={isOpen} onClose={onClose}>

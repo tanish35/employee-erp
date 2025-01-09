@@ -69,7 +69,7 @@ const Dashboard = () => {
     setLoading(true);
     const fetchData = async () => {
       try {
-        // Fetch projects
+        //Fetch projects
         const projectsResponse = await axios.get("/project/getprojects", {
           withCredentials: true,
         });
@@ -661,13 +661,13 @@ const Dashboard = () => {
                       Project
                     </Th>
                     <Th width="100px" bg="yellow.50">
-                      Previous Week
+                      Current Week
                       <br />
                       Actual
                       <Badge colorScheme="purple">{week0ActualHours} hrs</Badge>
                     </Th>
                     <Th width="100px" bg="green.50">
-                      Previous Week
+                      Current Week
                       <br />
                       Planned
                       <Badge colorScheme="purple">
@@ -990,17 +990,25 @@ const Dashboard = () => {
                 </Tbody>
               </Table>
             </Box>
-            <Box mt={4}>
+            <Box
+              mt={4}
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              flexDirection="row"
+            >
               {!actualWeekReports.some((r) => r.Submitted === 1) && (
                 <Button colorScheme="teal" onClick={handleSubmission}>
                   Submit Weekly Report
                 </Button>
               )}
+              {!actualWeekReports.some((r) => r.Submitted === 1) && (
+                <AddProject />
+              )}
             </Box>
           </Flex>
         </GridItem>
       </Grid>
-      {!actualWeekReports.some((r) => r.Submitted === 1) && <AddProject />}
     </Container>
   );
 };
