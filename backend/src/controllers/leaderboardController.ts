@@ -6,7 +6,7 @@ export const getLeaderboard = asyncHandler(
   async (req: Request, res: Response) => {
     const currentDate = new Date();
 
-    const prevWeek = await prisma.week.findFirst({
+    const currentWeek = await prisma.week.findFirst({
       where: {
         startDate: {
           lte: currentDate,
@@ -17,24 +17,27 @@ export const getLeaderboard = asyncHandler(
       },
     });
 
-    if (!prevWeek) {
-      res.status(400).json({ error: "No data found" });
+    if (!currentWeek) {
+      res.status(404).json({ message: "No current week found" });
       return;
     }
 
     const employees = await prisma.employee.findMany({
       include: {
         WeeklyActualReport: {
-          where: { weekId: prevWeek.weekId },
+          where: { weekId: currentWeek.weekId },
         },
         ActualLeaves: {
-          where: { weekId: prevWeek.weekId },
+          where: { weekId: currentWeek.weekId },
+        },
+        WeeklyReport: {
+          where: { weekId: currentWeek.weekId },
         },
       },
     });
 
     const leaderboard = employees.map((employee) => {
-      const totalHoursWorked = employee.WeeklyActualReport.reduce(
+      const actualHours = employee.WeeklyActualReport.reduce(
         (sum, report) => sum + report.hours,
         0
       );
@@ -42,15 +45,21 @@ export const getLeaderboard = asyncHandler(
         (sum, leave) => sum + leave.hours,
         0
       );
-      const effectiveHours = prevWeek.availableHours - leaveHours;
-      const capacityPercentage = (totalHoursWorked / effectiveHours) * 100;
+      const plannedHours = employee.WeeklyReport.reduce(
+        (sum, report) => sum + report.hours,
+        0
+      );
+      const effectiveHours = currentWeek.availableHours - leaveHours;
+      const capacityPercentage = (actualHours / effectiveHours) * 100;
 
       return {
         id: employee.employeeId,
         name: employee.name,
-        capacityPercentage: Math.round(capacityPercentage * 100) / 100,
-        totalHoursWorked,
+        plannedHours,
+        actualHours,
+        leaveHours,
         effectiveHours,
+        capacityPercentage: Math.round(capacityPercentage * 100) / 100,
       };
     });
 
@@ -65,7 +74,8 @@ export const getLeaderboard = asyncHandler(
           !top3.some((topEmployee) => topEmployee.id === employee.id)
       )
       .slice(-3);
+    const newLeaderboard = top3.concat(bottom3);
 
-    res.status(200).json({ top3, bottom3, prevWeek });
+    res.status(200).json({ leaderboard: newLeaderboard, currentWeek });
   }
 );

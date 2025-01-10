@@ -504,15 +504,15 @@ export const addProjectData = asyncHandler(
             weekId: week.weekId,
             projectId: project.projectId,
             hours:
-              i === -1
+              i === 0
                 ? parseInt(week0Hours, 10) || 0
-                : i === 0
-                ? parseInt(week1Hours, 10) || 0
                 : i === 1
-                ? parseInt(week2Hours, 10) || 0
+                ? parseInt(week1Hours, 10) || 0
                 : i === 2
-                ? parseInt(week3Hours, 10) || 0
+                ? parseInt(week2Hours, 10) || 0
                 : i === 3
+                ? parseInt(week3Hours, 10) || 0
+                : i === 4
                 ? parseInt(week4Hours, 10) || 0
                 : 0, // Convert to integer or default to 0
             employeeId,

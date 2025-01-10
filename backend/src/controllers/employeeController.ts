@@ -6,25 +6,27 @@ import jwt from "jsonwebtoken";
 
 export const registerEmployee = asyncHandler(
   async (req: Request, res: Response) => {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, managerId, subordinateId } = req.body;
     if (!name || !email || !password || !role) {
       res.status(400);
       throw new Error("All fields are required");
     }
+
     if (!process.env.SECRET) {
       res.status(500);
       throw new Error("Internal Server Error");
     }
-    const hashedPassword = await bcrypt.hash(password, 8);
+
     const employeeExists = await prisma.employee.findUnique({
-      where: {
-        email,
-      },
+      where: { email },
     });
     if (employeeExists) {
       res.status(400);
       throw new Error("Employee already exists");
     }
+
+    const hashedPassword = await bcrypt.hash(password, 8);
+
     const employee = await prisma.employee.create({
       data: {
         name,
@@ -33,6 +35,13 @@ export const registerEmployee = asyncHandler(
         role,
       },
     });
+    if (managerId || subordinateId) {
+      await updateHierarchyForNewEmployee(
+        employee.employeeId,
+        managerId,
+        subordinateId
+      );
+    }
     res.status(201).json(employee);
   }
 );
@@ -198,7 +207,109 @@ export const addNextWeek = asyncHandler(async (req: Request, res: Response) => {
 //   });
 // });
 
+export const getSubordinates = asyncHandler(
+  async (req: Request, res: Response) => {
+    // @ts-ignore
+    const employeeId = req.employee.employeeId;
+    const subordinates = await prisma.employee.findUnique({
+      where: {
+        employeeId,
+      },
+      select: {
+        managing: true,
+      },
+    });
+    res.status(200).json(subordinates);
+  }
+);
+
 export const logOut = asyncHandler(async (req: Request, res: Response) => {
   res.clearCookie("Authorization");
   res.status(200).json({ message: "Logged out" });
 });
+
+async function updateHierarchyForNewEmployee(
+  employeeId: string,
+  managerId?: string,
+  subordinateId?: string
+) {
+  let manager = null;
+  let subordinate = null;
+
+  // Fetch direct manager details if provided
+  if (managerId) {
+    manager = await prisma.employee.findUnique({
+      where: { employeeId: managerId },
+      include: { managedBy: true }, // Higher-level managers
+    });
+  }
+
+  // Fetch subordinate details if provided
+  if (subordinateId) {
+    subordinate = await prisma.employee.findUnique({
+      where: { employeeId: subordinateId },
+      include: { managing: true }, // Subordinate's direct subordinates
+    });
+  }
+
+  // Step 1: Add new employee (`K`) to manager's `managing` array
+  if (manager) {
+    await prisma.employee.update({
+      where: { employeeId: managerId },
+      data: {
+        managing: {
+          connect: { employeeId },
+        },
+      },
+    });
+
+    // Step 2: Add `K` to all higher-level managers' `managing` arrays
+    for (const higherManager of manager.managedBy) {
+      await prisma.employee.update({
+        where: { employeeId: higherManager.employeeId },
+        data: {
+          managing: {
+            connect: { employeeId },
+          },
+        },
+      });
+    }
+  }
+
+  // Step 3: Add new employee (`K`) to subordinate's `managedBy` array
+  if (subordinate) {
+    await prisma.employee.update({
+      where: { employeeId: subordinateId },
+      data: {
+        managedBy: {
+          connect: { employeeId },
+        },
+      },
+    });
+  }
+
+  // Step 4: Update `K`'s own `managedBy` and `managing` arrays
+  await prisma.employee.update({
+    where: { employeeId },
+    data: {
+      managedBy: manager
+        ? {
+            connect: [
+              { employeeId: managerId },
+              ...manager.managedBy.map((m) => ({ employeeId: m.employeeId })),
+            ],
+          }
+        : undefined,
+      managing: subordinate
+        ? {
+            connect: [
+              { employeeId: subordinateId },
+              ...subordinate.managing.map((s) => ({
+                employeeId: s.employeeId,
+              })),
+            ],
+          }
+        : undefined,
+    },
+  });
+}

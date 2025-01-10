@@ -1,5 +1,6 @@
 import React, { useState, useEffect, act } from "react";
 import axios from "axios";
+import Dropdown from "./Dropdown";
 import {
   Box,
   Button,
@@ -39,7 +40,7 @@ import {
   FaUmbrellaBeach,
 } from "react-icons/fa";
 import AddProject from "./AddProject";
-import WeeklyLeavesSummary from "./WeeklyLeavesSummary";
+// import WeeklyLeavesSummary from "./WeeklyLeavesSummary";
 
 const Dashboard = () => {
   const [employeeData, setEmployeeData] = useState(null);
@@ -59,6 +60,8 @@ const Dashboard = () => {
   const [week0ActualHours, setWeek0ActuaHours] = useState(0);
   const [week0ActualLeaveDays, setWeek0ActualLeaveDays] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selectedEmployee, setSelectedEmployee] = useState("me");
+
   // const [week0ActualPercentage, setWeek0ActualPercentage] = useState(0);
 
   const toast = useToast();
@@ -248,6 +251,11 @@ const Dashboard = () => {
       ...prev,
       [projectId]: newRow,
     }));
+  };
+
+  const handleEmployeeChange = (employeeId) => {
+    setSelectedEmployee(employeeId);
+    // setFetchDataBool((prevState) => !prevState);
   };
 
   const handleSaveRow = async (row) => {
@@ -645,6 +653,10 @@ const Dashboard = () => {
                   </GridItem>
                 </Grid>
               </CardBody>
+              <Dropdown
+                selectedEmployee={selectedEmployee}
+                onEmployeeChange={handleEmployeeChange}
+              />
             </Card>
             <Heading as="h1" size="lg" mb={6}></Heading>
             <Box w="full" overflowX="auto">

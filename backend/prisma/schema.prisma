@@ -21,13 +21,17 @@ model Employee {
   role         String
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  Project      Project[]
-  WeeklyReport WeeklyReport[]
-  WeeklyActualReport WeeklyActualReport[]
-  Leaves       Leaves[]
-  EmployeeWeek EmployeeWeek[]
-  ActualLeaves ActualLeaves[]
+  managedBy    Employee[]     @relation("EmployeeManagers")
+  managing     Employee[]     @relation("EmployeeManagers")
+  Project              Project[]
+  WeeklyReport         WeeklyReport[]
+  WeeklyActualReport   WeeklyActualReport[]
+  Leaves               Leaves[]
+  EmployeeWeek         EmployeeWeek[]
+  ActualLeaves         ActualLeaves[]
 }
+
+
 
 model Project {
   projectId    String         @id @default(cuid())

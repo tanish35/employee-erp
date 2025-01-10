@@ -236,7 +236,7 @@ const ProjectHistoryPage = () => {
               height="fit-content"
               position="relative"
               top={-10}
-              maxW={{ base: "100%", lg: "200px" }}
+              maxW={{ base: "200px", lg: "200px" }}
               overflowX="hidden"
             >
               <Grid
@@ -290,7 +290,7 @@ const ProjectHistoryPage = () => {
                 <Box position="relative" left={-16}>
                   <Grid
                     templateRows="auto 1fr"
-                    templateColumns="repeat(5, 1fr)" // Five columns for the grid items
+                    templateColumns="repeat(5, 1fr)"
                     gap={2}
                     mb={4}
                     alignItems="center"
@@ -361,20 +361,25 @@ const ProjectHistoryPage = () => {
                             // borderRight="2px solid gray"
                           >
                             <VStack align="start" spacing={1}>
+                              <Tooltip label="Capacity Used" placement="top">
+                                <Text fontSize="xs" fontWeight="bold">
+                                  Capacity: <br></br>
+                                  <Badge
+                                    colorScheme={getCapacityColor(
+                                      Math.round(week.capacityUsed)
+                                    )}
+                                    fontSize="xs"
+                                  >
+                                    {Math.round(week.capacityUsed)}%
+                                  </Badge>
+                                </Text>
+                              </Tooltip>
                               <Tooltip
                                 label="Total Project Hours"
                                 placement="top"
                               >
                                 <Text fontSize="xs">
                                   Total: {week.totalProjectHours}h
-                                </Text>
-                              </Tooltip>
-                              <Tooltip
-                                label="Total Leave Hours"
-                                placement="top"
-                              >
-                                <Text fontSize="xs" color="orange.500">
-                                  Leaves: {week.totalLeaveHours}h
                                 </Text>
                               </Tooltip>
                               <Tooltip
@@ -385,17 +390,12 @@ const ProjectHistoryPage = () => {
                                   Effective: {week.totalEffectiveHours}h
                                 </Text>
                               </Tooltip>
-                              <Tooltip label="Capacity Used" placement="top">
-                                <Text fontSize="xs" fontWeight="bold">
-                                  Capacity: <br></br>
-                                  <Badge
-                                    colorScheme={getCapacityColor(
-                                      week.capacityUsed
-                                    )}
-                                    fontSize="xs"
-                                  >
-                                    {week.capacityUsed}%
-                                  </Badge>
+                              <Tooltip
+                                label="Total Leave Hours"
+                                placement="top"
+                              >
+                                <Text fontSize="xs" color="orange.500">
+                                  Leaves: {week.totalLeaveHours / 7 + " days"}
                                 </Text>
                               </Tooltip>
                             </VStack>
