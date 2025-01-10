@@ -3,7 +3,7 @@ import axios from "axios";
 import { Box, Text, Flex, Spinner, IconButton, Td } from "@chakra-ui/react";
 import { AddIcon, MinusIcon } from "@chakra-ui/icons";
 
-const WeeklyLeaveRow = () => {
+const WeeklyLeaveRow = ({ selectedEmployee }) => {
   const [leavesByWeek, setLeavesByWeek] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -11,8 +11,14 @@ const WeeklyLeaveRow = () => {
     const fetchData = async () => {
       try {
         const [leavesResponse, weeksResponse] = await Promise.all([
-          axios.get("/project/get4WeeksLeaves", { withCredentials: true }),
-          axios.get("/project/get4Weeks", { withCredentials: true }),
+          axios.get("/project/get4WeeksLeaves", {
+            params: { employeeId: selectedEmployee },
+            withCredentials: true,
+          }),
+          axios.get("/project/get4Weeks", {
+            params: { employeeId: selectedEmployee },
+            withCredentials: true,
+          }),
         ]);
 
         const leaves = leavesResponse.data.leaves;
@@ -90,32 +96,36 @@ const WeeklyLeaveRow = () => {
       _hover={{ boxShadow: "md", transform: "translateY(-2px)" }}
     >
       <Flex alignItems="center" justifyContent="space-between">
-        <IconButton
-          aria-label="Remove leave"
-          icon={<MinusIcon boxSize={3} />}
-          size="sm"
-          variant="ghost"
-          colorScheme="red"
-          opacity={0.6}
-          _hover={{ opacity: 1, bg: "red.100" }}
-          onClick={() => handleLeaveChange(week.weekId, "remove")}
-        />
+        {selectedEmployee == "me" && (
+          <IconButton
+            aria-label="Remove leave"
+            icon={<MinusIcon boxSize={3} />}
+            size="sm"
+            variant="ghost"
+            colorScheme="red"
+            opacity={0.6}
+            _hover={{ opacity: 1, bg: "red.100" }}
+            onClick={() => handleLeaveChange(week.weekId, "remove")}
+          />
+        )}
         <Text fontWeight="medium" fontSize="sm">
           {week.leaveDays.toFixed(1)}
           <Text as="span" fontSize="xs" ml={1} color="gray.500">
             {week.leaveDays > 1 ? "days" : "day"}
           </Text>
         </Text>
-        <IconButton
-          aria-label="Add leave"
-          icon={<AddIcon boxSize={3} />}
-          size="sm"
-          variant="ghost"
-          colorScheme="green"
-          opacity={0.6}
-          _hover={{ opacity: 1, bg: "green.100" }}
-          onClick={() => handleLeaveChange(week.weekId, "add")}
-        />
+        {selectedEmployee == "me" && (
+          <IconButton
+            aria-label="Add leave"
+            icon={<AddIcon boxSize={3} />}
+            size="sm"
+            variant="ghost"
+            colorScheme="green"
+            opacity={0.6}
+            _hover={{ opacity: 1, bg: "green.100" }}
+            onClick={() => handleLeaveChange(week.weekId, "add")}
+          />
+        )}
       </Flex>
     </Td>
   );

@@ -72,18 +72,24 @@ const Dashboard = () => {
     setLoading(true);
     const fetchData = async () => {
       try {
-        //Fetch projects
+        // Use selectedEmployee as the employeeId
+        const employeeId = selectedEmployee;
+
+        // Fetch projects
         const projectsResponse = await axios.get("/project/getprojects", {
+          params: { employeeId },
           withCredentials: true,
         });
         setProjects(projectsResponse.data);
 
         // Fetch monthly report
         const monthlyResponse = await axios.get("/project/getMonthlyReport", {
+          params: { employeeId },
           withCredentials: true,
         });
 
         const weekData = await axios.get("project/get4Weeks", {
+          params: { employeeId },
           withCredentials: true,
         });
         setWeek1(weekData.data.weeks[1]);
@@ -93,17 +99,18 @@ const Dashboard = () => {
 
         // Fetch leaves data
         const leavesResponse = await axios.get("/project/get4WeeksLeaves", {
+          params: { employeeId },
           withCredentials: true,
         });
 
         const actualLeaveResponse = await axios.get(
           "/project/getActualLeaves",
           {
+            params: { employeeId },
             withCredentials: true,
           }
         );
 
-        // console.log(actualLeaveResponse.data.hours);
         setWeek0ActuaHours(
           weekData.data.weeks[0].availableHours -
             actualLeaveResponse.data.actualLeave.hours
@@ -161,6 +168,7 @@ const Dashboard = () => {
         );
 
         const week4Response = await axios.get("/project/getWeek4Data", {
+          params: { employeeId },
           withCredentials: true,
         });
         setLoading(false);
@@ -208,9 +216,9 @@ const Dashboard = () => {
 
         // Fetch previous week data
         const prevWeekResponse = await axios.get("/project/getPrevWeek", {
+          params: { employeeId },
           withCredentials: true,
         });
-        // console.log(prevWeekResponse.data.weeklyReports);
         setPrevWeekReports(prevWeekResponse.data.weeklyReports || []);
         setActualWeekReports(prevWeekResponse.data.actualWeeklyReport || []);
       } catch (error) {
@@ -226,7 +234,6 @@ const Dashboard = () => {
       }
     };
     fetchData();
-    // setLoading(false);
   }, [fetchDataBool]);
 
   const handleDuplicateRow = (project) => {
@@ -255,7 +262,7 @@ const Dashboard = () => {
 
   const handleEmployeeChange = (employeeId) => {
     setSelectedEmployee(employeeId);
-    // setFetchDataBool((prevState) => !prevState);
+    setFetchDataBool((prevState) => !prevState);
   };
 
   const handleSaveRow = async (row) => {
@@ -718,20 +725,26 @@ const Dashboard = () => {
                             {project.category}
                           </Badge>
                           <Flex alignItems="center">
-                            <IconButton
-                              icon={<MdAdd />}
-                              size="sm"
-                              onClick={() => handleDuplicateRow(project)}
-                              aria-label="Duplicate row"
-                              ml={2}
-                            />
-                            <IconButton
-                              icon={<MdDelete />}
-                              size="sm"
-                              onClick={() => handleDeleteRow(project.projectId)}
-                              aria-label="Delete row"
-                              ml={2}
-                            />
+                            {selectedEmployee == "me" && (
+                              <IconButton
+                                icon={<MdAdd />}
+                                size="sm"
+                                onClick={() => handleDuplicateRow(project)}
+                                aria-label="Duplicate row"
+                                ml={2}
+                              />
+                            )}
+                            {selectedEmployee == "me" && (
+                              <IconButton
+                                icon={<MdDelete />}
+                                size="sm"
+                                onClick={() =>
+                                  handleDeleteRow(project.projectId)
+                                }
+                                aria-label="Delete row"
+                                ml={2}
+                              />
+                            )}
                           </Flex>
                         </Flex>
                       </Td>
@@ -938,38 +951,44 @@ const Dashboard = () => {
                         justifyContent="space-between"
                         ml={-2}
                       >
-                        <IconButton
-                          aria-label="Remove leave"
-                          icon={<MinusIcon boxSize={3} />}
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="red"
-                          opacity={0.6}
-                          _hover={{ opacity: 1, bg: "red.100" }}
-                          onClick={() =>
-                            handleLeaveChange(week0.weekId, "remove")
-                          }
-                        />
+                        {selectedEmployee == "me" && (
+                          <IconButton
+                            aria-label="Remove leave"
+                            icon={<MinusIcon boxSize={3} />}
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="red"
+                            opacity={0.6}
+                            _hover={{ opacity: 1, bg: "red.100" }}
+                            onClick={() =>
+                              handleLeaveChange(week0.weekId, "remove")
+                            }
+                          />
+                        )}
                         <Text fontWeight="medium" fontSize="sm">
                           {week0ActualLeaveDays.toFixed(1)}
                           <Text as="span" fontSize="xs" ml={1} color="gray.500">
                             {week0ActualLeaveDays > 1 ? "days" : "day"}
                           </Text>
                         </Text>
-                        <IconButton
-                          aria-label="Add leave"
-                          icon={<AddIcon boxSize={3} />}
-                          size="sm"
-                          variant="ghost"
-                          colorScheme="green"
-                          opacity={0.6}
-                          _hover={{ opacity: 1, bg: "green.100" }}
-                          onClick={() => handleLeaveChange(week0.weekId, "add")}
-                        />
+                        {selectedEmployee == "me" && (
+                          <IconButton
+                            aria-label="Add leave"
+                            icon={<AddIcon boxSize={3} />}
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="green"
+                            opacity={0.6}
+                            _hover={{ opacity: 1, bg: "green.100" }}
+                            onClick={() =>
+                              handleLeaveChange(week0.weekId, "add")
+                            }
+                          />
+                        )}
                       </Flex>
                     </Td>
 
-                    <WeeklyLeaveRow />
+                    <WeeklyLeaveRow selectedEmployee={selectedEmployee} />
                   </Tr>
                   <Tr fontWeight="bold">
                     <Td colSpan={2}>Percentage Capacity</Td>
@@ -1009,14 +1028,14 @@ const Dashboard = () => {
               alignItems="center"
               flexDirection="row"
             >
-              {!actualWeekReports.some((r) => r.Submitted === 1) && (
-                <Button colorScheme="teal" onClick={handleSubmission}>
-                  Submit Weekly Report
-                </Button>
-              )}
-              {!actualWeekReports.some((r) => r.Submitted === 1) && (
-                <AddProject />
-              )}
+              {!actualWeekReports.some((r) => r.Submitted === 1) &&
+                selectedEmployee == "me" && (
+                  <Button colorScheme="teal" onClick={handleSubmission}>
+                    Submit Weekly Report
+                  </Button>
+                )}
+              {!actualWeekReports.some((r) => r.Submitted === 1) &&
+                selectedEmployee == "me" && <AddProject />}
             </Box>
           </Flex>
         </GridItem>

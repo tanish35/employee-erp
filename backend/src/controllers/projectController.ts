@@ -34,8 +34,17 @@ export const addProject = asyncHandler(async (req: Request, res: Response) => {
 // );
 
 export const getProjects = asyncHandler(async (req: Request, res: Response) => {
-  //@ts-ignore
-  const employeeId = req.employee.employeeId;
+  let employeeId = req.query.employeeId;
+  if (typeof employeeId != "string") {
+    employeeId = "me";
+  }
+  if (employeeId == "me") {
+    //@ts-ignore
+    employeeId = req.employee.employeeId;
+  }
+  if (Array.isArray(employeeId)) {
+    employeeId = employeeId[0];
+  }
   const projects = await prisma.project.findMany({
     where: {
       employeeId: employeeId,
@@ -48,10 +57,23 @@ export const getProjects = asyncHandler(async (req: Request, res: Response) => {
 export const getMonthlyReport = asyncHandler(
   //@ts-ignore
   async (req: Request, res: Response) => {
-    //@ts-ignore
-    const employeeId = req.employee.employeeId;
-    //@ts-ignore
-    const employee = req.employee;
+    let employeeId = req.query.employeeId;
+    if (typeof employeeId != "string") {
+      employeeId = "me";
+    }
+    if (employeeId == "me") {
+      //@ts-ignore
+      employeeId = req.employee.employeeId;
+    }
+    if (Array.isArray(employeeId)) {
+      employeeId = employeeId[0];
+    }
+
+    const employee = await prisma.employee.findFirst({
+      where: {
+        employeeId: employeeId,
+      },
+    });
 
     try {
       const currentDate = new Date();
@@ -143,7 +165,7 @@ export const getMonthlyReport = asyncHandler(
               data: {
                 weekId: weekId,
                 projectId: projectId,
-                employeeId: employeeId,
+                employeeId: employeeId as string,
                 hours: 0,
                 Submitted: 0,
               },
@@ -271,10 +293,17 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
 
   //   console.log(isoPrevDate);
 
-  //@ts-ignore
-  const employeeId = req.employee.employeeId;
-  //@ts-ignore
-  const employee = req.employee;
+  let employeeId = req.query.employeeId;
+  if (typeof employeeId != "string") {
+    employeeId = "me";
+  }
+  if (employeeId == "me") {
+    //@ts-ignore
+    employeeId = req.employee.employeeId;
+  }
+  if (Array.isArray(employeeId)) {
+    employeeId = employeeId[0];
+  }
 
   try {
     const prevWeek = await prisma.week.findFirst({
@@ -375,7 +404,7 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
             projectId: project.projectId,
             hours: 0,
             Submitted: 0,
-            employeeId,
+            employeeId: employeeId as string,
           },
         });
       }
@@ -416,6 +445,12 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
       });
     }
 
+    const employee = await prisma.employee.findFirst({
+      where: {
+        employeeId: employeeId,
+      },
+    });
+
     res.status(200).json({ weeklyReports, employee, actualWeeklyReport });
   } catch (error) {
     console.error("Error fetching previous week's report:", error);
@@ -426,11 +461,6 @@ export const getPrevWeek = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const get4Weeks = asyncHandler(async (req: Request, res: Response) => {
-  //@ts-ignore
-  const employeeId = req.employee.employeeId;
-  //@ts-ignore
-  const employee = req.employee;
-
   const weeks = [];
 
   // Current week's Monday
@@ -626,8 +656,17 @@ export const submitData = asyncHandler(async (req: Request, res: Response) => {
 
 export const getWeek4Data = asyncHandler(
   async (req: Request, res: Response) => {
-    //@ts-ignore
-    const employeeId = req.employee.employeeId;
+    let employeeId = req.query.employeeId;
+    if (typeof employeeId != "string") {
+      employeeId = "me";
+    }
+    if (employeeId == "me") {
+      //@ts-ignore
+      employeeId = req.employee.employeeId;
+    }
+    if (Array.isArray(employeeId)) {
+      employeeId = employeeId[0];
+    }
     const date = new Date();
     const week4Date = new Date(date.getTime() + 4 * 7 * 24 * 60 * 60 * 1000);
     const week = await prisma.week.findFirst({
@@ -684,7 +723,7 @@ export const getWeek4Data = asyncHandler(
             projectId: project.projectId,
             hours: 0,
             Submitted: 0,
-            employeeId,
+            employeeId: employeeId as string,
           },
         });
       }
@@ -863,10 +902,17 @@ export const addLeaveData = asyncHandler(
 
 export const get4WeeksLeaves = asyncHandler(
   async (req: Request, res: Response) => {
-    //@ts-ignore
-    const employeeId = req.employee.employeeId;
-    //@ts-ignore
-    const employee = req.employee;
+    let employeeId = req.query.employeeId;
+    if (typeof employeeId != "string") {
+      employeeId = "me";
+    }
+    if (employeeId == "me") {
+      //@ts-ignore
+      employeeId = req.employee.employeeId;
+    }
+    if (Array.isArray(employeeId)) {
+      employeeId = employeeId[0];
+    }
 
     const leaves = [];
 
@@ -896,7 +942,7 @@ export const get4WeeksLeaves = asyncHandler(
           leave = await prisma.leaves.create({
             data: {
               weekId,
-              employeeId,
+              employeeId: employeeId as string,
               hours: 0,
             },
           });
@@ -1066,8 +1112,17 @@ export const getActualLeaves = asyncHandler(
   async (req: Request, res: Response) => {
     const date = new Date();
     const newDate = new Date(date.getTime());
-    //@ts-ignore
-    const employeeId = req.employee.employeeId;
+    let employeeId = req.query.employeeId;
+    if (typeof employeeId != "string") {
+      employeeId = "me";
+    }
+    if (employeeId == "me") {
+      //@ts-ignore
+      employeeId = req.employee.employeeId;
+    }
+    if (Array.isArray(employeeId)) {
+      employeeId = employeeId[0];
+    }
     const week0 = await prisma.week.findFirst({
       where: {
         startDate: { lte: newDate.toISOString() },
@@ -1091,7 +1146,7 @@ export const getActualLeaves = asyncHandler(
       await prisma.actualLeaves.create({
         data: {
           weekId: week0.weekId,
-          employeeId,
+          employeeId: employeeId as string,
           hours: 0,
         },
       });
