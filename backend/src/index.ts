@@ -14,7 +14,7 @@ const corsOptions = {
   origin: [
     // "http://localhost:3001",
     "http://localhost:5173",
-    "https://employee.devpixel.site.com",
+    "https://employee.devpixel.site",
   ],
   credentials: true,
 };
