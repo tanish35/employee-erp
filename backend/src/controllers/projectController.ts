@@ -986,8 +986,8 @@ export const saveNewProject = asyncHandler(
         employeeId,
       },
     });
-    const date = new Date();
-    let newDate = new Date(date.getTime() - 7 * 24 * 60 * 60 * 1000);
+    let date = new Date();
+    let newDate = date;
     const week0 = await prisma.week.findFirst({
       where: {
         startDate: { lte: newDate.toISOString() },
@@ -1014,10 +1014,11 @@ export const saveNewProject = asyncHandler(
         employeeId,
       },
     });
+    newDate = new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000);
     const week1 = await prisma.week.findFirst({
       where: {
-        startDate: { lte: date.toISOString() },
-        endDate: { gt: date.toISOString() },
+        startDate: { lte: newDate.toISOString() },
+        endDate: { gt: newDate.toISOString() },
       },
     });
     if (!week1) {
@@ -1032,7 +1033,7 @@ export const saveNewProject = asyncHandler(
         employeeId,
       },
     });
-    newDate = new Date(date.getTime() + 7 * 24 * 60 * 60 * 1000);
+    newDate = new Date(date.getTime() + 14 * 24 * 60 * 60 * 1000);
     const week2 = await prisma.week.findFirst({
       where: {
         startDate: { lte: newDate.toISOString() },
@@ -1051,7 +1052,7 @@ export const saveNewProject = asyncHandler(
         employeeId,
       },
     });
-    newDate = new Date(date.getTime() + 14 * 24 * 60 * 60 * 1000);
+    newDate = new Date(date.getTime() + 21 * 24 * 60 * 60 * 1000);
     const week3 = await prisma.week.findFirst({
       where: {
         startDate: { lte: newDate.toISOString() },
@@ -1070,7 +1071,7 @@ export const saveNewProject = asyncHandler(
         employeeId,
       },
     });
-    newDate = new Date(date.getTime() + 21 * 24 * 60 * 60 * 1000);
+    newDate = new Date(date.getTime() + 28 * 24 * 60 * 60 * 1000);
     const week4 = await prisma.week.findFirst({
       where: {
         startDate: { lte: newDate.toISOString() },

@@ -435,7 +435,7 @@ const Dashboard = () => {
     isSubmitted = false,
     isDuplicated = false
   ) => {
-    if (isSubmitted) {
+    if (isSubmitted || selectedEmployee !== "me") {
       return <Text>{value}</Text>;
     }
     return (
